@@ -16,18 +16,26 @@ const affordCategoryEl = document.getElementById("afford-category");
 const affordResult = document.getElementById("afford-result");
 const dashboardStatus = document.getElementById("dashboard-status");
 
-const scoreSectionEl = document.getElementById("score-section");
+const scoreGaugeWrapEl = document.getElementById("score-gauge-wrap");
 const scoreValueEl = document.getElementById("score-value");
 const scoreGaugeFillEl = document.getElementById("score-gauge-fill");
 const scoreBreakdownEl = document.getElementById("score-breakdown");
+const scoreFlipInnerEl = document.getElementById("score-flip-inner");
+const scoreFlipBtnFrontEl = document.getElementById("score-flip-btn-front");
+const scoreFlipBtnBackEl = document.getElementById("score-flip-btn-back");
+const spendingPieCanvasEl = document.getElementById("spending-pie-canvas");
+const spendingLegendEl = document.getElementById("spending-legend");
 const trendCanvasEl = document.getElementById("trend-canvas");
 const trendTooltipEl = document.getElementById("trend-tooltip");
+const trendAxisLabelsEl = document.getElementById("trend-axis-labels");
 const goalInputEl = document.getElementById("goal-input");
 const goalResultEl = document.getElementById("goal-result");
 const investAmountEl = document.getElementById("invest-amount");
 const investYearsEl = document.getElementById("invest-years");
+const investCadenceEl = document.getElementById("invest-cadence");
 const investResultEl = document.getElementById("invest-result");
 const allocationListEl = document.getElementById("allocation-list");
+const ledgerBrandEl = document.querySelector(".topnav-brand");
 
 let latestBalances = null;
 let latestTransactions = null;
@@ -51,6 +59,11 @@ tabButtons.forEach((btn) => {
     tabButtons.forEach((b) => b.classList.toggle("active", b === btn));
     tabPanels.forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== target));
   });
+});
+
+ledgerBrandEl.addEventListener("click", () => {
+  const dashboardBtn = document.querySelector('.topnav-tab[data-tab="dashboard"]');
+  dashboardBtn.click();
 });
 
 // ---------------------------------------------------------------
@@ -175,6 +188,7 @@ async function loadEverything() {
   }
 
   renderScore();
+  if (scoreFlipInnerEl.classList.contains("flipped")) renderSpendingBreakdown();
   dashboardStatus.textContent = "";
   refreshBtn.classList.remove("spinning");
 }
@@ -395,10 +409,107 @@ function renderScore() {
   });
 }
 
-// Tap the score section to expand/collapse the breakdown.
-scoreSectionEl.addEventListener("click", (e) => {
+// Tap the gauge to expand/collapse the breakdown.
+scoreGaugeWrapEl.addEventListener("click", () => {
   scoreBreakdownEl.classList.toggle("expanded");
 });
+
+// Flip card — front (score) <-> back (spending breakdown)
+scoreFlipBtnFrontEl.addEventListener("click", (e) => {
+  e.stopPropagation();
+  scoreFlipInnerEl.classList.add("flipped");
+  renderSpendingBreakdown();
+});
+
+scoreFlipBtnBackEl.addEventListener("click", (e) => {
+  e.stopPropagation();
+  scoreFlipInnerEl.classList.remove("flipped");
+});
+
+// ---------------------------------------------------------------
+// Spending breakdown — pie chart on the back of the flip card
+//
+// Honest limitation: Plaid gives us 30 days of transactions, which
+// get-transactions aggregates into 30-day category totals. "Week" below
+// divides those by ~4.3 to approximate a weekly average. "Day" would need
+// real daily-level data we don't have yet — labeled clearly as such rather
+// than faking a number.
+// ---------------------------------------------------------------
+
+const CATEGORY_COLORS = [
+  "#00D9A3", "#4FA8D9", "#D9A24F", "#B56AD9", "#D95F5F", "#6AD98F", "#D9C24F", "#7C948A",
+];
+
+let spendingPeriod = "week";
+
+document.querySelectorAll(".spending-period-btn").forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    spendingPeriod = btn.dataset.period;
+    document.querySelectorAll(".spending-period-btn").forEach((b) => b.classList.toggle("active", b === btn));
+    renderSpendingBreakdown();
+  });
+});
+
+function renderSpendingBreakdown() {
+  const ctx = spendingPieCanvasEl.getContext("2d");
+  const width = spendingPieCanvasEl.width;
+  const height = spendingPieCanvasEl.height;
+  ctx.clearRect(0, 0, width, height);
+
+  if (spendingPeriod === "day") {
+    ctx.font = "13px IBM Plex Sans, sans-serif";
+    ctx.fillStyle = "#7C948A";
+    ctx.textAlign = "center";
+    ctx.fillText("Day view coming soon —", width / 2, height / 2 - 8);
+    ctx.fillText("needs daily-level data.", width / 2, height / 2 + 10);
+    spendingLegendEl.innerHTML = "";
+    return;
+  }
+
+  const breakdown = latestTransactions?.category_breakdown_30d ?? [];
+  if (breakdown.length === 0) {
+    ctx.font = "13px IBM Plex Sans, sans-serif";
+    ctx.fillStyle = "#7C948A";
+    ctx.textAlign = "center";
+    ctx.fillText("No spending data yet.", width / 2, height / 2);
+    spendingLegendEl.innerHTML = "";
+    return;
+  }
+
+  // Divide 30-day totals down to a weekly average (~4.33 weeks/month).
+  const weeklyBreakdown = breakdown.map((b) => ({ category: b.category, total: b.total / 4.33 }));
+  const total = weeklyBreakdown.reduce((sum, b) => sum + b.total, 0);
+
+  const cx = width / 2;
+  const cy = height / 2;
+  const radius = 70;
+  let startAngle = -Math.PI / 2;
+
+  weeklyBreakdown.forEach((b, i) => {
+    const sliceAngle = (b.total / total) * 2 * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, radius, startAngle, startAngle + sliceAngle);
+    ctx.closePath();
+    ctx.fillStyle = CATEGORY_COLORS[i % CATEGORY_COLORS.length];
+    ctx.fill();
+    startAngle += sliceAngle;
+  });
+
+  spendingLegendEl.innerHTML = weeklyBreakdown
+    .map((b, i) => {
+      const label = b.category.replaceAll("_", " ").toLowerCase();
+      const color = CATEGORY_COLORS[i % CATEGORY_COLORS.length];
+      return `
+        <div class="spending-legend-row">
+          <span class="spending-legend-swatch" style="background:${color}"></span>
+          <span>${label}</span>
+          <span class="mono">${formatMoney(b.total)}/wk</span>
+        </div>`;
+    })
+    .join("");
+}
 
 // ---------------------------------------------------------------
 // Net worth trend graph — interactive canvas sparkline, last 90 days
@@ -418,6 +529,7 @@ function renderTrend(history) {
     ctx.font = "13px IBM Plex Mono, monospace";
     ctx.fillStyle = "#7C948A";
     ctx.fillText("Not enough history yet — check back after a few refreshes.", 10, height / 2);
+    trendAxisLabelsEl.innerHTML = "";
     return;
   }
 
@@ -440,6 +552,14 @@ function renderTrend(history) {
   });
 
   ctx.stroke();
+
+  const dateLabel = (iso) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const mid = history[Math.floor((history.length - 1) / 2)];
+  trendAxisLabelsEl.innerHTML = `
+    <span>${dateLabel(history[0].created_at)}</span>
+    <span>${dateLabel(mid.created_at)}</span>
+    <span>${dateLabel(history[history.length - 1].created_at)}</span>
+  `;
 }
 
 function nearestTrendPoint(canvasX) {
@@ -543,6 +663,47 @@ goalInputEl.addEventListener("input", () => {
   updateGoalResult(latestBalances);
 });
 
+goalInputEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") showGoalPlan(latestBalances);
+});
+
+function showGoalPlan(data) {
+  const goal = parseFloat(goalInputEl.value);
+  if (isNaN(goal) || goal <= 0 || !data) return;
+
+  const remaining = goal - data.net_worth;
+  if (remaining <= 0) {
+    goalResultEl.textContent = "You've already hit this goal.";
+    return;
+  }
+
+  // Required monthly savings to hit the goal in 5 years, assuming a 7%/yr
+  // return compounded monthly — the same annuity-payment math as a
+  // standard retirement calculator. A planning estimate, not a guarantee.
+  const years = 5;
+  const monthlyRate = 0.07 / 12;
+  const months = years * 12;
+  const requiredMonthly = (remaining * monthlyRate) / (Math.pow(1 + monthlyRate, months) - 1);
+
+  const currentPaceLine = (() => {
+    const history = data.history ?? [];
+    if (history.length < 2) return "";
+    const first = history[0];
+    const last = history[history.length - 1];
+    const daysElapsed = (new Date(last.created_at) - new Date(first.created_at)) / (1000 * 60 * 60 * 24);
+    const growthPerDay = daysElapsed > 0 ? (last.net_worth - first.net_worth) / daysElapsed : 0;
+    if (growthPerDay <= 0) return "At your current trend, growth has been flat or negative.";
+    const yearsToGoal = remaining / growthPerDay / 365;
+    return `At your current pace: ~${yearsToGoal.toFixed(1)} years.`;
+  })();
+
+  goalResultEl.innerHTML = `
+    <p><strong>Here's your plan:</strong></p>
+    <p>${currentPaceLine}</p>
+    <p>To hit this in 5 years at a 7%/yr estimate: save ~${formatMoney(requiredMonthly)}/month.</p>
+  `;
+}
+
 // ---------------------------------------------------------------
 // "Invest instead" comparison — simple 7%/yr nominal estimate
 // ---------------------------------------------------------------
@@ -550,6 +711,7 @@ goalInputEl.addEventListener("input", () => {
 function updateInvestResult() {
   const amount = parseFloat(investAmountEl.value);
   const years = parseFloat(investYearsEl.value);
+  const cadence = investCadenceEl.value;
 
   if (isNaN(amount) || amount <= 0 || isNaN(years) || years <= 0) {
     investResultEl.textContent = "";
@@ -557,17 +719,35 @@ function updateInvestResult() {
   }
 
   const annualReturn = 0.07;
-  const futureValue = amount * Math.pow(1 + annualReturn, years);
-  const gain = futureValue - amount;
+
+  if (cadence === "once") {
+    const futureValue = amount * Math.pow(1 + annualReturn, years);
+    const gain = futureValue - amount;
+    investResultEl.innerHTML = `
+      <p>At a 7%/yr estimate: ${formatMoney(futureValue)} in ${years} year${years == 1 ? "" : "s"}</p>
+      <p>(${formatMoney(gain)} of growth — this is a rough estimate, not a guarantee)</p>
+    `;
+    return;
+  }
+
+  // Recurring contribution — future value of an annuity, compounded at the
+  // same cadence as the contribution (weekly/monthly/yearly).
+  const periodsPerYear = { weekly: 52, monthly: 12, yearly: 1 }[cadence];
+  const periodRate = Math.pow(1 + annualReturn, 1 / periodsPerYear) - 1;
+  const totalPeriods = years * periodsPerYear;
+  const futureValue = amount * ((Math.pow(1 + periodRate, totalPeriods) - 1) / periodRate);
+  const totalContributed = amount * totalPeriods;
+  const gain = futureValue - totalContributed;
 
   investResultEl.innerHTML = `
-    <p>At a 7%/yr estimate: ${formatMoney(futureValue)} in ${years} year${years == 1 ? "" : "s"}</p>
-    <p>(${formatMoney(gain)} of growth — this is a rough estimate, not a guarantee)</p>
+    <p>${formatMoney(amount)}/${cadence.replace("ly", "")} at 7%/yr: ${formatMoney(futureValue)} in ${years} year${years == 1 ? "" : "s"}</p>
+    <p>(${formatMoney(totalContributed)} contributed · ${formatMoney(gain)} of growth — a rough estimate, not a guarantee)</p>
   `;
 }
 
 investAmountEl.addEventListener("input", updateInvestResult);
 investYearsEl.addEventListener("input", updateInvestResult);
+investCadenceEl.addEventListener("change", updateInvestResult);
 
 // ---------------------------------------------------------------
 // Asset allocation breakdown

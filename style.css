@@ -51,6 +51,10 @@ html, body {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
 }
 
 .topnav-tabs {
@@ -63,8 +67,8 @@ html, body {
   border: none;
   color: var(--ink-dim);
   font-family: var(--font-sans);
-  font-size: 12px;
-  padding: 6px 10px;
+  font-size: 14px;
+  padding: 8px 12px;
   border-radius: 6px;
   cursor: pointer;
 }
@@ -137,9 +141,9 @@ select:focus-visible {
 
 .hero-number {
   font-family: var(--font-mono);
-  font-size: 44px;
+  font-size: 52px;
   font-weight: 500;
-  margin-top: 6px;
+  margin-top: 8px;
   letter-spacing: -0.01em;
 }
 
@@ -159,13 +163,57 @@ select:focus-visible {
   padding: 24px 0;
   border-bottom: 1px solid var(--hairline);
   text-align: center;
+}
+
+.score-flip-container {
+  perspective: 1200px;
+}
+
+.score-flip-inner {
+  position: relative;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+  min-height: 280px;
+}
+
+.score-flip-inner.flipped {
+  transform: rotateY(180deg);
+}
+
+.score-face {
+  backface-visibility: hidden;
+  width: 100%;
+}
+
+.score-face-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: rotateY(180deg);
+}
+
+.score-flip-btn {
+  background: none;
+  border: 1px solid var(--hairline);
+  color: var(--ink-dim);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-family: var(--font-sans);
   cursor: pointer;
+  margin-top: 10px;
+}
+
+.score-flip-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .score-gauge-wrap {
   display: flex;
   justify-content: center;
   margin: 12px 0 8px;
+  cursor: pointer;
 }
 
 .score-gauge-track {
@@ -188,19 +236,19 @@ select:focus-visible {
 
 .score-gauge-number {
   font-family: var(--font-mono);
-  font-size: 34px;
+  font-size: 36px;
   font-weight: 500;
   fill: var(--ink);
 }
 
 .score-gauge-label {
   font-family: var(--font-sans);
-  font-size: 10px;
+  font-size: 11px;
   fill: var(--ink-dim);
 }
 
 .score-tap-hint {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ink-dim);
   margin-top: 4px;
 }
@@ -214,25 +262,25 @@ select:focus-visible {
 .score-breakdown.expanded { display: block; }
 
 .score-breakdown .list-row {
-  font-size: 13px;
+  font-size: 15px;
   align-items: center;
 }
 
 .score-weight {
   color: var(--ink-dim);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .score-tooltip-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   border: 1px solid var(--ink-dim);
   color: var(--ink-dim);
-  font-size: 10px;
+  font-size: 11px;
   font-family: var(--font-sans);
   margin-left: 6px;
   cursor: pointer;
@@ -246,7 +294,7 @@ select:focus-visible {
 }
 
 .score-tooltip-text {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ink-dim);
   background: var(--bg-raised);
   border: 1px solid var(--hairline);
@@ -258,6 +306,60 @@ select:focus-visible {
 }
 
 .score-tooltip-text.shown { display: block; }
+
+/* ---------------- Spending breakdown (back of the flip card) ---------------- */
+
+.spending-period-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.spending-period-btn {
+  background: none;
+  border: 1px solid var(--hairline);
+  color: var(--ink-dim);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+}
+
+.spending-period-btn.active {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.spending-pie-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.spending-legend {
+  text-align: left;
+}
+
+.spending-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 13px;
+}
+
+.spending-legend-row span:nth-child(2) {
+  flex: 1;
+}
+
+.spending-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
 
 /* ---------------- Ledger rows ---------------- */
 
@@ -319,6 +421,15 @@ select:focus-visible {
 
 .trend-tooltip.shown { display: block; }
 
+.trend-axis-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+
 /* ---------------- Afford calculator — centered input ---------------- */
 
 .check-block {
@@ -347,6 +458,31 @@ select:focus-visible {
   font-family: var(--font-mono);
   color: var(--ink-dim);
   margin-right: 4px;
+}
+
+.check-input-row input[type="number"] {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 20px;
+  width: 100%;
+  text-align: center;
+}
+
+.check-input-row input[type="number"]:focus { outline: none; }
+
+.check-input-row select {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  width: 100%;
+  text-align: center;
+  appearance: none;
 }
 
 #afford-input {
@@ -417,6 +553,11 @@ select:focus-visible {
 .invest-inputs {
   display: flex;
   gap: 10px;
+  justify-content: center;
+}
+
+.invest-cadence-row {
+  margin-top: 10px;
   justify-content: center;
 }
 
@@ -592,6 +733,17 @@ select:focus-visible {
   border-radius: 8px;
   padding: 20px;
   text-align: center;
+}
+
+.book-call-card-spaced {
+  margin-top: 14px;
+}
+
+.placeholder-note {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-dim);
+  margin-top: 6px;
 }
 
 .book-call-card p {

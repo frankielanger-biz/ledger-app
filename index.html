@@ -19,7 +19,7 @@
 <body>
 
   <nav class="topnav">
-    <span class="topnav-brand">Ledger</span>
+    <button class="topnav-brand">Ledger</button>
     <div class="topnav-tabs">
       <button class="topnav-tab active" data-tab="dashboard">Dashboard</button>
       <button class="topnav-tab" data-tab="faq">FAQ</button>
@@ -41,17 +41,39 @@
       <div class="hero-delta" id="net-worth-delta"></div>
     </section>
 
-    <section class="score-section" id="score-section">
+    <section class="score-section">
       <div class="section-label">Financial health score</div>
-      <div class="score-gauge-wrap">
-        <svg class="score-gauge" width="160" height="160" viewBox="0 0 160 160">
-          <circle class="score-gauge-track" cx="80" cy="80" r="65" />
-          <circle class="score-gauge-fill" id="score-gauge-fill" cx="80" cy="80" r="65" />
-          <text class="score-gauge-number" id="score-value" x="80" y="80" text-anchor="middle" dominant-baseline="middle">—</text>
-        </svg>
+      <div class="score-flip-container">
+        <div class="score-flip-inner" id="score-flip-inner">
+
+          <div class="score-face score-face-front">
+            <div class="score-gauge-wrap" id="score-gauge-wrap">
+              <svg class="score-gauge" width="160" height="160" viewBox="0 0 160 160">
+                <circle class="score-gauge-track" cx="80" cy="80" r="65" />
+                <circle class="score-gauge-fill" id="score-gauge-fill" cx="80" cy="80" r="65" />
+                <text class="score-gauge-number" id="score-value" x="80" y="80" text-anchor="middle" dominant-baseline="middle">—</text>
+              </svg>
+            </div>
+            <div class="score-tap-hint">Tap the gauge for a breakdown</div>
+            <div id="score-breakdown" class="score-breakdown"></div>
+            <button class="score-flip-btn" id="score-flip-btn-front">See spending breakdown →</button>
+          </div>
+
+          <div class="score-face score-face-back">
+            <div class="section-label">Spending breakdown</div>
+            <div class="spending-period-toggle">
+              <button class="spending-period-btn active" data-period="day">Day</button>
+              <button class="spending-period-btn" data-period="week">Week</button>
+            </div>
+            <div class="spending-pie-wrap">
+              <canvas id="spending-pie-canvas" width="160" height="160"></canvas>
+            </div>
+            <div id="spending-legend" class="spending-legend"></div>
+            <button class="score-flip-btn" id="score-flip-btn-back">← Back to score</button>
+          </div>
+
+        </div>
       </div>
-      <div class="score-tap-hint">Tap for breakdown</div>
-      <div id="score-breakdown" class="score-breakdown"></div>
     </section>
 
     <section class="ledger">
@@ -75,6 +97,7 @@
         <canvas id="trend-canvas" width="600" height="120"></canvas>
         <div id="trend-tooltip" class="trend-tooltip"></div>
       </div>
+      <div id="trend-axis-labels" class="trend-axis-labels"></div>
     </section>
 
     <section class="check-block">
@@ -121,6 +144,14 @@
           <input type="number" id="invest-years" inputmode="decimal" placeholder="Years" />
           <span class="years-suffix">yrs</span>
         </div>
+      </div>
+      <div class="check-input-row invest-cadence-row">
+        <select id="invest-cadence">
+          <option value="once">One-time</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="yearly">Yearly</option>
+        </select>
       </div>
       <div id="invest-result" class="invest-result"></div>
     </section>
@@ -179,7 +210,6 @@
   <!-- ===================== RESOURCES TAB ===================== -->
   <section class="page-panel tab-panel hidden" data-panel="resources">
     <div class="page-title">Resources</div>
-    <div class="page-sub">A starting point, not financial advice.</div>
 
     <div class="resource-card">
       <div class="resource-card-title">Understanding your runway</div>
@@ -210,22 +240,27 @@
   <!-- ===================== BOOK A CALL TAB ===================== -->
   <section class="page-panel tab-panel hidden" data-panel="book-call">
     <div class="page-title">Book a call</div>
-    <div class="page-sub">Two options, pick what fits.</div>
 
     <div class="book-call-card">
-      <div class="resource-card-title">Free 30-minute account help</div>
+      <div class="resource-card-title">Want to talk to a professional? It's free.</div>
       <p>
-        Confused about a number, a connection, or what the score means? This is a free call to help
-        you understand your own account — not financial advice, just help using the tool.
+        Confused about a number, a connection, or what the score means — this call is to help you
+        understand your own account.
       </p>
       <a class="book-call-btn" href="mailto:frankie@example.com?subject=Ledger%20-%20Account%20Help">
         Book a free call
       </a>
     </div>
 
-    <div class="book-call-note">
-      Looking for actual financial guidance — investments, insurance, planning? That's a separate,
-      paid conversation. Reach out and ask.
+    <div class="book-call-card book-call-card-spaced">
+      <div class="resource-card-title">Want real financial guidance?</div>
+      <p>
+        Investments, insurance, planning — a paid conversation with Frankie directly.
+        <span class="placeholder-note">($50/mo · two 30-min calls — placeholder pricing)</span>
+      </p>
+      <a class="book-call-btn" href="mailto:frankie@example.com?subject=Ledger%20-%20Advisory%20Call">
+        Book a paid call
+      </a>
     </div>
   </section>
 
