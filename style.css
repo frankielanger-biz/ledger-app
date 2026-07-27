@@ -1,0 +1,363 @@
+/* ===========================================================
+   Design tokens
+   Background: near-black ink, not pure black — feels like a
+   physical ledger book under low light, not a phone screen.
+   Numbers run in mono (IBM Plex Mono) because they're the one
+   thing on this screen that should read like data, not prose.
+   =========================================================== */
+
+:root {
+  --bg: #0B0E11;
+  --bg-raised: #12161B;
+  --hairline: #262B31;
+  --ink: #EDEDE6;
+  --ink-dim: #8B9198;
+  --positive: #4C9A6A;
+  --negative: #B5533C;
+  --accent: #D9C27A; /* muted brass — a ledger's gold leaf, used sparingly */
+
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-sans: "IBM Plex Sans", -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+.hidden { display: none !important; }
+
+/* ---------------- Auth screen ---------------- */
+
+#auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-card {
+  max-width: 380px;
+  width: 100%;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.auth-card h1 {
+  font-size: 28px;
+  line-height: 1.25;
+  margin: 12px 0 8px;
+  font-weight: 600;
+}
+
+.sub {
+  color: var(--ink-dim);
+  font-size: 14px;
+  margin: 0 0 24px;
+}
+
+#auth-form {
+  display: flex;
+  gap: 8px;
+}
+
+#auth-email {
+  flex: 1;
+  background: var(--bg-raised);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  padding: 12px 14px;
+  color: var(--ink);
+  font-size: 15px;
+  font-family: var(--font-sans);
+}
+
+#auth-email:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+#auth-form button {
+  background: var(--ink);
+  color: var(--bg);
+  border: none;
+  border-radius: 6px;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+}
+
+.auth-status {
+  color: var(--ink-dim);
+  font-size: 13px;
+  margin-top: 12px;
+  min-height: 16px;
+}
+
+/* ---------------- Dashboard ---------------- */
+
+#dashboard-screen {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 20px 40px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0 8px;
+}
+
+.icon-btn {
+  background: none;
+  border: 1px solid var(--hairline);
+  color: var(--ink-dim);
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.icon-btn:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.hero {
+  padding: 28px 0 20px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.hero-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hero-number {
+  font-family: var(--font-mono);
+  font-size: 44px;
+  font-weight: 500;
+  margin-top: 6px;
+  letter-spacing: -0.01em;
+}
+
+.hero-delta {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  margin-top: 6px;
+  color: var(--ink-dim);
+}
+
+.hero-delta.positive { color: var(--positive); }
+.hero-delta.negative { color: var(--negative); }
+
+/* Ledger-style line items — literal hairline rules between rows,
+   because this genuinely is a balance sheet, not a decorative list. */
+
+.ledger {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.ledger-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 15px;
+}
+
+.ledger-label { color: var(--ink-dim); }
+
+.ledger-value {
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.ledger-value.negative { color: var(--negative); }
+
+/* ---------------- Afford calculator ---------------- */
+
+.check-block {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.check-label {
+  font-size: 13px;
+  color: var(--ink-dim);
+  margin-bottom: 10px;
+}
+
+.check-input-row {
+  display: flex;
+  align-items: center;
+  background: var(--bg-raised);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.dollar-sign {
+  font-family: var(--font-mono);
+  color: var(--ink-dim);
+  margin-right: 4px;
+}
+
+#afford-input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 20px;
+  width: 100%;
+}
+
+#afford-input:focus { outline: none; }
+
+.afford-result {
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.afford-result p:first-child {
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.afford-result p:last-child {
+  color: var(--ink-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  margin: 0;
+}
+
+/* ---------------- Accounts list ---------------- */
+
+.accounts { padding: 20px 0; }
+
+.section-label {
+  font-size: 13px;
+  color: var(--ink-dim);
+  margin-bottom: 12px;
+}
+
+.account-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.account-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.account-name { font-size: 14px; }
+
+.account-institution {
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+
+.account-balance {
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.account-balance.negative { color: var(--negative); }
+
+.empty-state {
+  color: var(--ink-dim);
+  font-size: 14px;
+  padding: 16px 0;
+}
+
+/* Shared row style for subscriptions, bills, spending, holdings, liabilities —
+   same hairline-ledger pattern as the accounts list, reused deliberately
+   so the whole app reads as one continuous ledger rather than five
+   differently-styled widgets bolted together. */
+
+.subscriptions, .bills, .spending, .investments, .liabilities-detail {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.section-label span {
+  color: var(--ink-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.list-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.list-row:last-child { border-bottom: none; }
+
+.list-row .mono {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-dim);
+}
+
+.investments-summary { margin-bottom: 8px; }
+
+.connect-btn {
+  width: 100%;
+  margin-top: 12px;
+  background: none;
+  border: 1px dashed var(--hairline);
+  color: var(--ink-dim);
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 14px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+}
+
+.connect-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.dashboard-status {
+  text-align: center;
+  color: var(--ink-dim);
+  font-size: 13px;
+  min-height: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

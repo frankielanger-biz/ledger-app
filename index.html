@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Ledger</title>
+<meta name="theme-color" content="#0B0E11" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ===================== SIGN IN ===================== -->
+  <section id="auth-screen" class="screen">
+    <div class="auth-card">
+      <div class="eyebrow">Ledger</div>
+      <h1>Check the number before you decide.</h1>
+      <p class="sub">Sign in with a magic link — no password to remember.</p>
+      <form id="auth-form">
+        <input type="email" id="auth-email" placeholder="you@email.com" required autocomplete="email" />
+        <button type="submit">Send link</button>
+      </form>
+      <p id="auth-status" class="auth-status"></p>
+    </div>
+  </section>
+
+  <!-- ===================== DASHBOARD ===================== -->
+  <main id="dashboard-screen" class="screen hidden">
+
+    <header class="topbar">
+      <span class="eyebrow">Ledger</span>
+      <button id="refresh-btn" class="icon-btn" title="Refresh">↻</button>
+    </header>
+
+    <section class="hero">
+      <div class="hero-label">Net worth</div>
+      <div class="hero-number" id="net-worth-value">—</div>
+      <div class="hero-delta" id="net-worth-delta"></div>
+    </section>
+
+    <section class="ledger">
+      <div class="ledger-row">
+        <span class="ledger-label">Liquid cash</span>
+        <span class="ledger-value" id="liquid-cash-value">—</span>
+      </div>
+      <div class="ledger-row">
+        <span class="ledger-label">Total assets</span>
+        <span class="ledger-value" id="total-assets-value">—</span>
+      </div>
+      <div class="ledger-row">
+        <span class="ledger-label">Total liabilities</span>
+        <span class="ledger-value negative" id="total-liabilities-value">—</span>
+      </div>
+    </section>
+
+    <section class="check-block">
+      <div class="check-label">Can I afford it?</div>
+      <div class="check-input-row">
+        <span class="dollar-sign">$</span>
+        <input type="number" id="afford-input" inputmode="decimal" placeholder="0" />
+      </div>
+      <div id="afford-result" class="afford-result"></div>
+    </section>
+
+    <section class="accounts">
+      <div class="section-label">Accounts</div>
+      <div id="accounts-list" class="accounts-list"></div>
+      <button id="connect-btn" class="connect-btn">+ Connect a bank</button>
+    </section>
+
+    <section class="subscriptions">
+      <div class="section-label">Subscriptions <span id="subscriptions-total"></span></div>
+      <div id="subscriptions-list" class="subscriptions-list"></div>
+    </section>
+
+    <section class="bills">
+      <div class="section-label">Upcoming bills</div>
+      <div id="bills-list" class="bills-list"></div>
+    </section>
+
+    <section class="spending">
+      <div class="section-label">Spending, last 30 days</div>
+      <div id="spending-list" class="spending-list"></div>
+    </section>
+
+    <section class="investments">
+      <div class="section-label">Investments</div>
+      <div id="investments-summary" class="investments-summary"></div>
+      <div id="top-holdings-list" class="top-holdings-list"></div>
+    </section>
+
+    <section class="liabilities-detail">
+      <div class="section-label">Liabilities detail</div>
+      <div id="liabilities-list" class="liabilities-list"></div>
+    </section>
+
+    <p id="dashboard-status" class="dashboard-status"></p>
+
+  </main>
+
+  <!-- Plaid Link -->
+  <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+  <!-- Supabase client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
