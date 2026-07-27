@@ -18,22 +18,7 @@
 </head>
 <body>
 
-  <!-- ===================== SIGN IN ===================== -->
-  <section id="auth-screen" class="screen">
-    <div class="auth-card">
-      <div class="eyebrow">Ledger</div>
-      <h1>Check the number before you decide.</h1>
-      <p class="sub">Sign in with a magic link — no password to remember.</p>
-      <form id="auth-form">
-        <input type="email" id="auth-email" placeholder="you@email.com" required autocomplete="email" />
-        <button type="submit">Send link</button>
-      </form>
-      <p id="auth-status" class="auth-status"></p>
-    </div>
-  </section>
-
-  <!-- ===================== DASHBOARD ===================== -->
-  <main id="dashboard-screen" class="screen hidden">
+  <main id="dashboard-screen" class="screen">
 
     <header class="topbar">
       <span class="eyebrow">Ledger</span>
@@ -76,41 +61,11 @@
       <button id="connect-btn" class="connect-btn">+ Connect a bank</button>
     </section>
 
-    <section class="subscriptions">
-      <div class="section-label">Subscriptions <span id="subscriptions-total"></span></div>
-      <div id="subscriptions-list" class="subscriptions-list"></div>
-    </section>
-
-    <section class="bills">
-      <div class="section-label">Upcoming bills</div>
-      <div id="bills-list" class="bills-list"></div>
-    </section>
-
-    <section class="spending">
-      <div class="section-label">Spending, last 30 days</div>
-      <div id="spending-list" class="spending-list"></div>
-    </section>
-
-    <section class="investments">
-      <div class="section-label">Investments</div>
-      <div id="investments-summary" class="investments-summary"></div>
-      <div id="top-holdings-list" class="top-holdings-list"></div>
-    </section>
-
-    <section class="liabilities-detail">
-      <div class="section-label">Liabilities detail</div>
-      <div id="liabilities-list" class="liabilities-list"></div>
-    </section>
-
     <p id="dashboard-status" class="dashboard-status"></p>
 
   </main>
 
-  <!-- Plaid Link -->
   <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-  <!-- Supabase client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-
   <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
