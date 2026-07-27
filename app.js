@@ -12,13 +12,16 @@ const accountsListEl = document.getElementById("accounts-list");
 const connectBtn = document.getElementById("connect-btn");
 const refreshBtn = document.getElementById("refresh-btn");
 const affordInput = document.getElementById("afford-input");
-const affordDiscretionaryEl = document.getElementById("afford-discretionary");
+const affordCategoryEl = document.getElementById("afford-category");
 const affordResult = document.getElementById("afford-result");
 const dashboardStatus = document.getElementById("dashboard-status");
 
+const scoreSectionEl = document.getElementById("score-section");
 const scoreValueEl = document.getElementById("score-value");
+const scoreGaugeFillEl = document.getElementById("score-gauge-fill");
 const scoreBreakdownEl = document.getElementById("score-breakdown");
 const trendCanvasEl = document.getElementById("trend-canvas");
+const trendTooltipEl = document.getElementById("trend-tooltip");
 const goalInputEl = document.getElementById("goal-input");
 const goalResultEl = document.getElementById("goal-result");
 const investAmountEl = document.getElementById("invest-amount");
@@ -28,6 +31,38 @@ const allocationListEl = document.getElementById("allocation-list");
 
 let latestBalances = null;
 let latestTransactions = null;
+let latestHistory = [];
+
+// Categories that count as "discretionary" for the afford-check comparison —
+// matches the same buckets get-transactions uses server-side, so the two
+// stay consistent with each other.
+const DISCRETIONARY_CHECK_CATEGORIES = new Set(["discretionary", "subscription"]);
+
+// ---------------------------------------------------------------
+// Tab navigation
+// ---------------------------------------------------------------
+
+const tabButtons = document.querySelectorAll(".topnav-tab");
+const tabPanels = document.querySelectorAll(".tab-panel");
+
+tabButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const target = btn.dataset.tab;
+    tabButtons.forEach((b) => b.classList.toggle("active", b === btn));
+    tabPanels.forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== target));
+  });
+});
+
+// ---------------------------------------------------------------
+// FAQ accordion
+// ---------------------------------------------------------------
+
+document.querySelectorAll(".faq-question").forEach((q) => {
+  q.addEventListener("click", () => {
+    const answer = q.nextElementSibling;
+    answer.classList.toggle("shown");
+  });
+});
 
 // ---------------------------------------------------------------
 // Formatting helpers
@@ -120,8 +155,9 @@ async function loadEverything() {
   try {
     const balances = await callFunction("get-balances");
     latestBalances = balances;
+    latestHistory = balances.history ?? [];
     renderBalances(balances);
-    renderTrend(balances.history ?? []);
+    renderTrend(latestHistory);
     renderAllocation(balances);
     renderGoal(balances);
   } catch (err) {
@@ -134,8 +170,6 @@ async function loadEverything() {
     const transactions = await callFunction("get-transactions");
     latestTransactions = transactions;
   } catch (err) {
-    // Transactions failing shouldn't block the core net worth view — some
-    // institutions don't support it, or there's no history yet.
     console.warn("Couldn't load transactions:", err.message);
     latestTransactions = null;
   }
@@ -179,12 +213,12 @@ function renderBalances(data) {
 refreshBtn.addEventListener("click", loadEverything);
 
 // ---------------------------------------------------------------
-// "Can I afford it?" — with a discretionary toggle
+// "Can I afford it?" — with a category dropdown
 // ---------------------------------------------------------------
 
 function updateAffordResult() {
   const amount = parseFloat(affordInput.value);
-  const isDiscretionary = affordDiscretionaryEl.checked;
+  const category = affordCategoryEl.value;
 
   if (!latestBalances || isNaN(amount) || amount <= 0) {
     affordResult.textContent = "";
@@ -202,35 +236,50 @@ function updateAffordResult() {
   else if (pctOfLiquid < 50) verdict = "This is a big chunk of your liquid cash.";
   else verdict = "This would take a serious bite out of your cash position.";
 
-  let discretionaryLine = "";
+  let categoryLine = "";
+  const isDiscretionary = DISCRETIONARY_CHECK_CATEGORIES.has(category);
   if (isDiscretionary && latestTransactions && latestTransactions.discretionary_spend_30d > 0) {
     const pctOfDiscretionary = (amount / latestTransactions.discretionary_spend_30d) * 100;
-    discretionaryLine = `<p>${pctOfDiscretionary.toFixed(0)}% of your last 30 days of discretionary spending</p>`;
+    categoryLine = `<p>${pctOfDiscretionary.toFixed(0)}% of your last 30 days of discretionary spending</p>`;
+  } else if (category === "housing" || category === "utilities") {
+    categoryLine = `<p>Fixed cost — this affects your runway, not your discretionary room.</p>`;
   }
 
   affordResult.innerHTML = `
     <p>${verdict}</p>
     <p>${pctOfLiquid.toFixed(1)}% of liquid cash · ${pctOfNetWorth.toFixed(1)}% of net worth</p>
-    ${discretionaryLine}
+    ${categoryLine}
     <p>new liquid cash ${formatMoney(newLiquid)} · new net worth ${formatMoney(newNetWorth)}</p>
   `;
 }
 
 affordInput.addEventListener("input", updateAffordResult);
-affordDiscretionaryEl.addEventListener("change", updateAffordResult);
+affordCategoryEl.addEventListener("change", updateAffordResult);
 
 // ---------------------------------------------------------------
-// Financial health score
+// Financial health score — whoop-style circular gauge
 //
 // Four inputs, each 0-100, weighted. This is a first-pass formula — the
-// weights are a reasonable starting guess, not a validated model. Test it
-// against your own real numbers before trusting it as gospel.
+// weights are a reasonable starting guess, not a validated model.
 //
 //   Runway (35%)     — liquid cash / fixed monthly spend, in months
-//   Elasticity (25%) — % of spending that's discretionary (more = more room to cut)
+//   Elasticity (25%) — % of spending that's discretionary
 //   Leverage (25%)   — debt / assets (less = better)
 //   Trajectory (15%) — net worth growth over the last ~6 months
 // ---------------------------------------------------------------
+
+const GAUGE_RADIUS = 65;
+const GAUGE_CIRCUMFERENCE = 2 * Math.PI * GAUGE_RADIUS;
+scoreGaugeFillEl.style.strokeDasharray = `${GAUGE_CIRCUMFERENCE}`;
+scoreGaugeFillEl.style.strokeDashoffset = `${GAUGE_CIRCUMFERENCE}`;
+
+let scoreComponentsCache = [];
+
+function setGauge(score) {
+  const pct = clamp(score, 0, 100) / 100;
+  const offset = GAUGE_CIRCUMFERENCE * (1 - pct);
+  scoreGaugeFillEl.style.strokeDashoffset = `${offset}`;
+}
 
 function renderScore() {
   if (!latestBalances) return;
@@ -238,7 +287,6 @@ function renderScore() {
   const fixedMonthlySpend = latestTransactions?.fixed_spend_30d ?? null;
   const discretionaryPct = latestTransactions?.discretionary_pct ?? null;
 
-  // Runway
   let runwayScore = null;
   let runwayMonths = null;
   if (fixedMonthlySpend && fixedMonthlySpend > 0) {
@@ -246,17 +294,14 @@ function renderScore() {
     runwayScore = clamp((runwayMonths / 12) * 100, 0, 100);
   }
 
-  // Elasticity
   const elasticityScore = discretionaryPct !== null ? clamp(discretionaryPct * 100, 0, 100) : null;
 
-  // Leverage
   let leverageScore = null;
   if (latestBalances.total_assets > 0) {
     const debtRatio = latestBalances.total_liabilities / latestBalances.total_assets;
     leverageScore = clamp(100 - debtRatio * 100, 0, 100);
   }
 
-  // Trajectory
   let trajectoryScore = null;
   const priorNetWorth = latestBalances.net_worth_6mo_ago;
   if (priorNetWorth && priorNetWorth !== 0) {
@@ -264,18 +309,51 @@ function renderScore() {
     trajectoryScore = clamp(50 + growthRate * 250, 0, 100);
   }
 
-  // Only average the components we actually have data for yet, and
-  // renormalize weights so a missing component doesn't just drag the
-  // score down artificially in the first few days of use.
   const weighted = [
-    { score: runwayScore, weight: 0.35, label: "Runway" },
-    { score: elasticityScore, weight: 0.25, label: "Elasticity" },
-    { score: leverageScore, weight: 0.25, label: "Leverage" },
-    { score: trajectoryScore, weight: 0.15, label: "Trajectory" },
+    {
+      score: runwayScore,
+      weight: 0.35,
+      label: "Runway",
+      tooltip: "Liquid cash divided by your fixed monthly spend, in months. More months = more cushion if income stops.",
+      detail: runwayMonths !== null ? `${runwayMonths.toFixed(1)} months of runway` : "",
+    },
+    {
+      score: elasticityScore,
+      weight: 0.25,
+      label: "Elasticity",
+      tooltip: "The % of your spending that's discretionary (could be cut fast) vs. fixed. Higher means more room to adapt.",
+      detail: discretionaryPct !== null ? `${(discretionaryPct * 100).toFixed(0)}% of spend is discretionary` : "",
+    },
+    {
+      score: leverageScore,
+      weight: 0.25,
+      label: "Leverage",
+      tooltip: "Total debt divided by total assets. Lower leverage scores higher — less of what you own is owed to someone else.",
+      detail:
+        latestBalances.total_assets > 0
+          ? `${((latestBalances.total_liabilities / latestBalances.total_assets) * 100).toFixed(0)}% debt-to-assets`
+          : "",
+    },
+    {
+      score: trajectoryScore,
+      weight: 0.15,
+      label: "Trajectory",
+      tooltip: "How your net worth has moved over roughly the last 6 months. Flat growth scores as neutral (50).",
+      detail:
+        priorNetWorth && priorNetWorth !== 0
+          ? `${(((latestBalances.net_worth - priorNetWorth) / Math.abs(priorNetWorth)) * 100) >= 0 ? "+" : ""}${(
+              ((latestBalances.net_worth - priorNetWorth) / Math.abs(priorNetWorth)) *
+              100
+            ).toFixed(1)}% net worth, ~6 months`
+          : "",
+    },
   ].filter((c) => c.score !== null);
+
+  scoreComponentsCache = weighted;
 
   if (weighted.length === 0) {
     scoreValueEl.textContent = "—";
+    setGauge(0);
     scoreBreakdownEl.innerHTML = `<div class="empty-state">Connect a bank and give it a few days to build a score.</div>`;
     return;
   }
@@ -284,37 +362,49 @@ function renderScore() {
   const finalScore = weighted.reduce((sum, c) => sum + c.score * (c.weight / totalWeight), 0);
 
   scoreValueEl.textContent = Math.round(finalScore);
+  setGauge(finalScore);
 
   scoreBreakdownEl.innerHTML = weighted
-    .map((c) => {
-      let detail = "";
-      if (c.label === "Runway" && runwayMonths !== null) {
-        detail = `${runwayMonths.toFixed(1)} months of runway`;
-      } else if (c.label === "Elasticity" && discretionaryPct !== null) {
-        detail = `${(discretionaryPct * 100).toFixed(0)}% of spend is discretionary`;
-      } else if (c.label === "Leverage") {
-        const debtRatio = latestBalances.total_liabilities / latestBalances.total_assets;
-        detail = `${(debtRatio * 100).toFixed(0)}% debt-to-assets`;
-      } else if (c.label === "Trajectory") {
-        const growthRate = ((latestBalances.net_worth - priorNetWorth) / Math.abs(priorNetWorth)) * 100;
-        detail = `${growthRate >= 0 ? "+" : ""}${growthRate.toFixed(1)}% net worth, ~6 months`;
-      }
-      return `
+    .map(
+      (c, i) => `
         <div class="list-row">
-          <span>${c.label} <span class="score-weight">(${Math.round(c.weight * 100)}%)</span></span>
-          <span class="mono">${Math.round(c.score)} · ${detail}</span>
-        </div>`;
-    })
+          <span>
+            ${c.label} <span class="score-weight">(${Math.round(c.weight * 100)}%)</span>
+            <span class="score-tooltip-icon" data-idx="${i}">?</span>
+          </span>
+          <span class="mono">${Math.round(c.score)} · ${c.detail}</span>
+        </div>
+        <div class="score-tooltip-text" data-idx="${i}">${c.tooltip}</div>
+      `
+    )
     .join("");
 
   if (weighted.length < 4) {
     scoreBreakdownEl.innerHTML += `<div class="empty-state">Score improves as more transaction history builds up.</div>`;
   }
+
+  // Wire up the tooltip icons freshly rendered above.
+  scoreBreakdownEl.querySelectorAll(".score-tooltip-icon").forEach((icon) => {
+    icon.addEventListener("click", (e) => {
+      e.stopPropagation(); // don't also trigger the expand/collapse on the section
+      const idx = icon.dataset.idx;
+      const text = scoreBreakdownEl.querySelector(`.score-tooltip-text[data-idx="${idx}"]`);
+      text.classList.toggle("shown");
+      icon.classList.toggle("active");
+    });
+  });
 }
 
+// Tap the score section to expand/collapse the breakdown.
+scoreSectionEl.addEventListener("click", (e) => {
+  scoreBreakdownEl.classList.toggle("expanded");
+});
+
 // ---------------------------------------------------------------
-// Net worth trend graph — simple canvas sparkline, last 90 days
+// Net worth trend graph — interactive canvas sparkline, last 90 days
 // ---------------------------------------------------------------
+
+let trendPoints = []; // cached pixel positions for hit-testing on hover/touch
 
 function renderTrend(history) {
   const canvas = trendCanvasEl;
@@ -322,10 +412,11 @@ function renderTrend(history) {
   const width = canvas.width;
   const height = canvas.height;
   ctx.clearRect(0, 0, width, height);
+  trendPoints = [];
 
   if (!history || history.length < 2) {
     ctx.font = "13px IBM Plex Mono, monospace";
-    ctx.fillStyle = "#5A6572";
+    ctx.fillStyle = "#7C948A";
     ctx.fillText("Not enough history yet — check back after a few refreshes.", 10, height / 2);
     return;
   }
@@ -337,18 +428,70 @@ function renderTrend(history) {
   const padding = 10;
 
   ctx.beginPath();
-  ctx.strokeStyle = "#3DDC84";
+  ctx.strokeStyle = "#00D9A3";
   ctx.lineWidth = 2;
 
   history.forEach((point, i) => {
     const x = padding + (i / (history.length - 1)) * (width - padding * 2);
     const y = height - padding - ((point.net_worth - min) / range) * (height - padding * 2);
+    trendPoints.push({ x, y, net_worth: point.net_worth, created_at: point.created_at });
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   });
 
   ctx.stroke();
 }
+
+function nearestTrendPoint(canvasX) {
+  if (trendPoints.length === 0) return null;
+  let closest = trendPoints[0];
+  let closestDist = Math.abs(trendPoints[0].x - canvasX);
+  for (const p of trendPoints) {
+    const dist = Math.abs(p.x - canvasX);
+    if (dist < closestDist) {
+      closest = p;
+      closestDist = dist;
+    }
+  }
+  return closest;
+}
+
+function showTrendTooltip(clientX) {
+  const rect = trendCanvasEl.getBoundingClientRect();
+  const scaleX = trendCanvasEl.width / rect.width;
+  const canvasX = (clientX - rect.left) * scaleX;
+  const point = nearestTrendPoint(canvasX);
+  if (!point) return;
+
+  const date = new Date(point.created_at);
+  const dateLabel = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+  trendTooltipEl.textContent = `${dateLabel} · ${formatMoney(point.net_worth)}`;
+  trendTooltipEl.style.left = `${(point.x / trendCanvasEl.width) * rect.width}px`;
+  trendTooltipEl.classList.add("shown");
+}
+
+function hideTrendTooltip() {
+  trendTooltipEl.classList.remove("shown");
+}
+
+trendCanvasEl.addEventListener("mousemove", (e) => showTrendTooltip(e.clientX));
+trendCanvasEl.addEventListener("mouseleave", hideTrendTooltip);
+trendCanvasEl.addEventListener(
+  "touchstart",
+  (e) => {
+    if (e.touches[0]) showTrendTooltip(e.touches[0].clientX);
+  },
+  { passive: true }
+);
+trendCanvasEl.addEventListener(
+  "touchmove",
+  (e) => {
+    if (e.touches[0]) showTrendTooltip(e.touches[0].clientX);
+  },
+  { passive: true }
+);
+trendCanvasEl.addEventListener("touchend", hideTrendTooltip);
 
 // ---------------------------------------------------------------
 // Goal net worth — stored locally on this device (no backend field yet)
@@ -401,10 +544,7 @@ goalInputEl.addEventListener("input", () => {
 });
 
 // ---------------------------------------------------------------
-// "Invest instead" comparison
-//
-// Uses a default 7% annual return (roughly the S&P 500's long-run nominal
-// average) — this is a simple estimate, not a real projection or advice.
+// "Invest instead" comparison — simple 7%/yr nominal estimate
 // ---------------------------------------------------------------
 
 function updateInvestResult() {
@@ -437,15 +577,15 @@ function renderAllocation(data) {
   const buckets = { Cash: 0, Investments: 0, "Real estate": 0, Other: 0 };
 
   for (const acct of data.accounts ?? []) {
-    if (acct.type === "credit" || acct.type === "loan") continue; // liabilities, not assets
+    if (acct.type === "credit" || acct.type === "loan") continue;
     const balance = acct.current ?? 0;
     if (acct.type === "investment") buckets["Investments"] += balance;
     else if (acct.type === "depository") buckets["Cash"] += balance;
-    else buckets["Other"] += balance; // Plaid's "other" account type
+    else buckets["Other"] += balance;
   }
 
   for (const item of data.manual_items ?? []) {
-    if (item.amount <= 0) continue; // only assets here, not manual debts
+    if (item.amount <= 0) continue;
     if (item.category === "real_estate") buckets["Real estate"] += item.amount;
     else buckets["Other"] += item.amount;
   }

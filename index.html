@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Ledger</title>
-<meta name="theme-color" content="#0B0E11" />
+<meta name="theme-color" content="#070B0A" />
 <link rel="manifest" href="manifest.json" />
 <link rel="apple-touch-icon" href="icons/icon-192.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -18,10 +18,20 @@
 </head>
 <body>
 
-  <main id="dashboard-screen" class="screen">
+  <nav class="topnav">
+    <span class="topnav-brand">Ledger</span>
+    <div class="topnav-tabs">
+      <button class="topnav-tab active" data-tab="dashboard">Dashboard</button>
+      <button class="topnav-tab" data-tab="faq">FAQ</button>
+      <button class="topnav-tab" data-tab="resources">Resources</button>
+      <button class="topnav-tab" data-tab="book-call">Book a call</button>
+    </div>
+  </nav>
+
+  <!-- ===================== DASHBOARD TAB ===================== -->
+  <main id="dashboard-screen" class="screen tab-panel" data-panel="dashboard">
 
     <header class="topbar">
-      <span class="eyebrow">Ledger</span>
       <button id="refresh-btn" class="icon-btn" title="Refresh">↻</button>
     </header>
 
@@ -31,9 +41,16 @@
       <div class="hero-delta" id="net-worth-delta"></div>
     </section>
 
-    <section class="score-section">
+    <section class="score-section" id="score-section">
       <div class="section-label">Financial health score</div>
-      <div class="score-number" id="score-value">—</div>
+      <div class="score-gauge-wrap">
+        <svg class="score-gauge" width="160" height="160" viewBox="0 0 160 160">
+          <circle class="score-gauge-track" cx="80" cy="80" r="65" />
+          <circle class="score-gauge-fill" id="score-gauge-fill" cx="80" cy="80" r="65" />
+          <text class="score-gauge-number" id="score-value" x="80" y="80" text-anchor="middle" dominant-baseline="middle">—</text>
+        </svg>
+      </div>
+      <div class="score-tap-hint">Tap for breakdown</div>
       <div id="score-breakdown" class="score-breakdown"></div>
     </section>
 
@@ -53,8 +70,11 @@
     </section>
 
     <section class="trend-section">
-      <div class="section-label">Net worth trend</div>
-      <canvas id="trend-canvas" width="600" height="120"></canvas>
+      <div class="section-label">Net worth trend <span>· touch or hover to scrub</span></div>
+      <div class="trend-canvas-wrap">
+        <canvas id="trend-canvas" width="600" height="120"></canvas>
+        <div id="trend-tooltip" class="trend-tooltip"></div>
+      </div>
     </section>
 
     <section class="check-block">
@@ -63,10 +83,16 @@
         <span class="dollar-sign">$</span>
         <input type="number" id="afford-input" inputmode="decimal" placeholder="0" />
       </div>
-      <label class="checkbox-row">
-        <input type="checkbox" id="afford-discretionary" />
-        <span>This is discretionary spending</span>
-      </label>
+      <select id="afford-category" class="afford-category-select">
+        <option value="">What kind of spend is this?</option>
+        <option value="housing">Housing</option>
+        <option value="utilities">Utilities</option>
+        <option value="subscription">Subscription</option>
+        <option value="discretionary">General discretionary</option>
+        <option value="need">General need</option>
+        <option value="investment">Investment</option>
+        <option value="other">Other</option>
+      </select>
       <div id="afford-result" class="afford-result"></div>
     </section>
 
@@ -93,7 +119,7 @@
         </div>
         <div class="check-input-row invest-years-row">
           <input type="number" id="invest-years" inputmode="decimal" placeholder="Years" />
-          <span class="years-suffix">years</span>
+          <span class="years-suffix">yrs</span>
         </div>
       </div>
       <div id="invest-result" class="invest-result"></div>
@@ -108,6 +134,100 @@
     <p id="dashboard-status" class="dashboard-status"></p>
 
   </main>
+
+  <!-- ===================== FAQ TAB ===================== -->
+  <section class="page-panel tab-panel hidden" data-panel="faq">
+    <div class="page-title">FAQ</div>
+    <div class="page-sub">Common questions about how Ledger works.</div>
+
+    <div class="faq-item">
+      <div class="faq-question">Is my data safe? <span>+</span></div>
+      <div class="faq-answer">
+        Ledger connects to your accounts through Plaid, the same connection technology used by
+        thousands of financial apps. Ledger never sees or stores your bank login — Plaid handles
+        that directly. The connection is read-only: nothing in this app can move money or make
+        changes to your accounts.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question">What is the financial health score? <span>+</span></div>
+      <div class="faq-answer">
+        A single 0-100 number combining four things: how many months your liquid cash would cover
+        your fixed costs (runway), how much of your spending is discretionary versus fixed
+        (elasticity), how leveraged you are (debt versus assets), and whether your net worth is
+        trending up or down. It's a starting formula, not a certified financial rating.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question">Why don't I see a score yet? <span>+</span></div>
+      <div class="faq-answer">
+        The score needs some transaction history to calculate elasticity and runway. Give it a
+        few days after connecting a bank for that data to build up.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question">Can this move or send money? <span>+</span></div>
+      <div class="faq-answer">
+        No. This is read-only. It can see balances and transactions, nothing more.
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== RESOURCES TAB ===================== -->
+  <section class="page-panel tab-panel hidden" data-panel="resources">
+    <div class="page-title">Resources</div>
+    <div class="page-sub">A starting point, not financial advice.</div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">Understanding your runway</div>
+      <div class="resource-card-desc">
+        Runway is how many months your liquid cash would last if you stopped earning today,
+        covering only fixed costs. A longer runway means more room to handle a shock or take a risk.
+      </div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">Discretionary vs. fixed spending</div>
+      <div class="resource-card-desc">
+        Fixed costs (rent, minimum debt payments, insurance) are hard to cut quickly. Discretionary
+        spending (dining, entertainment, shopping) is where you actually have flexibility if things
+        get tight.
+      </div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">Why net worth, not income</div>
+      <div class="resource-card-desc">
+        Income shows what's coming in. Net worth shows what you've actually built — everything you
+        own minus everything you owe. It's a more complete picture for big decisions.
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== BOOK A CALL TAB ===================== -->
+  <section class="page-panel tab-panel hidden" data-panel="book-call">
+    <div class="page-title">Book a call</div>
+    <div class="page-sub">Two options, pick what fits.</div>
+
+    <div class="book-call-card">
+      <div class="resource-card-title">Free 30-minute account help</div>
+      <p>
+        Confused about a number, a connection, or what the score means? This is a free call to help
+        you understand your own account — not financial advice, just help using the tool.
+      </p>
+      <a class="book-call-btn" href="mailto:frankie@example.com?subject=Ledger%20-%20Account%20Help">
+        Book a free call
+      </a>
+    </div>
+
+    <div class="book-call-note">
+      Looking for actual financial guidance — investments, insurance, planning? That's a separate,
+      paid conversation. Reach out and ask.
+    </div>
+  </section>
 
   <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
   <script src="config.js"></script>
