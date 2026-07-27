@@ -30,7 +30,11 @@ const trendCanvasEl = document.getElementById("trend-canvas");
 const trendTooltipEl = document.getElementById("trend-tooltip");
 const trendAxisLabelsEl = document.getElementById("trend-axis-labels");
 const goalInputEl = document.getElementById("goal-input");
+const goalYearsEl = document.getElementById("goal-years");
+const userAgeEl = document.getElementById("user-age");
 const goalResultEl = document.getElementById("goal-result");
+const forecastTrajectoryCanvasEl = document.getElementById("forecast-trajectory-canvas");
+const forecastSpendingCanvasEl = document.getElementById("forecast-spending-canvas");
 const investAmountEl = document.getElementById("invest-amount");
 const investYearsEl = document.getElementById("invest-years");
 const investCadenceEl = document.getElementById("invest-cadence");
@@ -57,9 +61,17 @@ const bookCallTopicEl = document.getElementById("book-call-topic");
 const bookCallBtnEl = document.getElementById("book-call-btn");
 const faqQuestionInputEl = document.getElementById("faq-question-input");
 const faqQuestionSubmitEl = document.getElementById("faq-question-submit");
-const settingsNameEl = document.getElementById("settings-name");
+const faqQuestionStatusEl = document.getElementById("faq-question-status");
+const settingsFirstNameEl = document.getElementById("settings-first-name");
+const settingsLastNameEl = document.getElementById("settings-last-name");
 const settingsEmailEl = document.getElementById("settings-email");
+const settingsPhoneEl = document.getElementById("settings-phone");
+const settingsAgeEl = document.getElementById("settings-age");
+const settingsBirthdayEl = document.getElementById("settings-birthday");
 const settingsSaveBtnEl = document.getElementById("settings-save-btn");
+const settingsAccountsListEl = document.getElementById("settings-accounts-list");
+const inviteFriendsBtnEl = document.getElementById("invite-friends-btn");
+const inviteStatusEl = document.getElementById("invite-status");
 const settingsSaveStatusEl = document.getElementById("settings-save-status");
 const swipeContainerEl = document.getElementById("swipe-container");
 
@@ -128,6 +140,45 @@ swipeContainerEl.addEventListener(
 
     swipeStartX = null;
     swipeStartY = null;
+  },
+  { passive: true }
+);
+
+// ---------------------------------------------------------------
+// Pull-to-refresh — only triggers when already at the top of the page,
+// so it doesn't fight with normal scrolling.
+// ---------------------------------------------------------------
+
+let pullStartY = null;
+let pullTriggered = false;
+
+document.addEventListener(
+  "touchstart",
+  (e) => {
+    if (window.scrollY === 0) pullStartY = e.touches[0].clientY;
+  },
+  { passive: true }
+);
+
+document.addEventListener(
+  "touchmove",
+  (e) => {
+    if (pullStartY === null) return;
+    const delta = e.touches[0].clientY - pullStartY;
+    if (delta > 80 && !pullTriggered) {
+      pullTriggered = true;
+      topbarStatusEl.textContent = "Release to refresh…";
+    }
+  },
+  { passive: true }
+);
+
+document.addEventListener(
+  "touchend",
+  () => {
+    if (pullTriggered) loadEverything();
+    pullStartY = null;
+    pullTriggered = false;
   },
   { passive: true }
 );
@@ -239,6 +290,7 @@ async function loadEverything() {
     renderTrend(latestHistory);
     renderAllocation(balances);
     renderGoal(balances);
+    renderSettingsAccounts(balances);
   } catch (err) {
     topbarStatusEl.textContent = "";
     dashboardStatus.textContent = `Couldn't load balances: ${err.message}`;
@@ -311,9 +363,13 @@ discreteToggleBtnEl.addEventListener("click", () => {
   discreteMode = !discreteMode;
   localStorage.setItem("ledger_discrete_mode", discreteMode);
   discreteToggleBtnEl.classList.toggle("active", discreteMode);
+  discreteToggleBtnEl.textContent = discreteMode ? "🙈" : "👁";
   if (latestBalances) renderBalances(latestBalances);
 });
-if (discreteMode) discreteToggleBtnEl.classList.add("active");
+if (discreteMode) {
+  discreteToggleBtnEl.classList.add("active");
+  discreteToggleBtnEl.textContent = "🙈";
+}
 
 refreshBtn.addEventListener("click", loadEverything);
 
@@ -347,7 +403,7 @@ function updateAffordResult() {
     const pctOfDiscretionary = (amount / latestTransactions.discretionary_spend_30d) * 100;
     categoryLine = `<p>${pctOfDiscretionary.toFixed(0)}% of your last 30 days of discretionary spending</p>`;
   } else if (category === "housing" || category === "utilities") {
-    categoryLine = `<p>Fixed cost — this affects your runway, not your discretionary room.</p>`;
+    categoryLine = `<p>Fixed cost. This affects your runway, not your discretionary room.</p>`;
   }
 
   affordResult.innerHTML = `
@@ -446,7 +502,7 @@ function renderScore() {
       score: leverageScore,
       weight: 0.25,
       label: "Leverage",
-      tooltip: "Total debt divided by total assets. Lower leverage scores higher — less of what you own is owed to someone else.",
+      tooltip: "Total debt divided by total assets. Lower leverage scores higher. Less of what you own is owed to someone else.",
       detail:
         latestBalances.total_assets > 0
           ? `${((latestBalances.total_liabilities / latestBalances.total_assets) * 100).toFixed(0)}% debt-to-assets`
@@ -581,7 +637,7 @@ function renderSpendingBreakdown() {
     ctx.font = "13px IBM Plex Sans, sans-serif";
     ctx.fillStyle = "#7C948A";
     ctx.textAlign = "center";
-    ctx.fillText("Day view coming soon —", width / 2, height / 2 - 8);
+    ctx.fillText("Day view coming soon.", width / 2, height / 2 - 8);
     ctx.fillText("needs daily-level data.", width / 2, height / 2 + 10);
     spendingLegendEl.innerHTML = "";
     return;
@@ -648,7 +704,7 @@ function renderTrend(history) {
   if (!history || history.length < 2) {
     ctx.font = "13px IBM Plex Mono, monospace";
     ctx.fillStyle = "#7C948A";
-    ctx.fillText("Not enough history yet — check back after a few refreshes.", 10, height / 2);
+    ctx.fillText("Not enough history yet. Check back after a few refreshes.", 10, height / 2);
     trendAxisLabelsEl.innerHTML = "";
     return;
   }
@@ -769,7 +825,7 @@ function updateGoalResult(data) {
   }
 
   if (growthPerDay <= 0) {
-    goalResultEl.textContent = "At your current trend, you're not on pace to reach this — growth has been flat or negative.";
+    goalResultEl.textContent = "At your current trend, you're not on pace to reach this. Growth has been flat or negative.";
     return;
   }
 
@@ -803,11 +859,12 @@ function showGoalPlan(data) {
   }
 
   const scenarioPct = parseFloat(scenarioSelectEl.value) || 0;
+  const years = parseFloat(goalYearsEl.value) || 5;
+  const age = parseFloat(userAgeEl.value);
 
-  // Required monthly savings to hit the goal in 5 years, assuming a 7%/yr
-  // return compounded monthly — the same annuity-payment math as a
+  // Required monthly savings to hit the goal in the chosen window, assuming
+  // a 7%/yr return compounded monthly — the same annuity-payment math as a
   // standard retirement calculator. A planning estimate, not a guarantee.
-  const years = 5;
   const monthlyRate = 0.07 / 12;
   const months = years * 12;
   const requiredMonthly = (remaining * monthlyRate) / (Math.pow(1 + monthlyRate, months) - 1);
@@ -815,12 +872,15 @@ function showGoalPlan(data) {
   const history = data.history ?? [];
   let currentPaceLine = "";
   let scenarioLine = "";
+  let baseGrowthPerDay = 0;
+  let adjustedGrowthPerDay = 0;
 
   if (history.length >= 2) {
     const first = history[0];
     const last = history[history.length - 1];
     const daysElapsed = (new Date(last.created_at) - new Date(first.created_at)) / (1000 * 60 * 60 * 24);
-    const baseGrowthPerDay = daysElapsed > 0 ? (last.net_worth - first.net_worth) / daysElapsed : 0;
+    baseGrowthPerDay = daysElapsed > 0 ? (last.net_worth - first.net_worth) / daysElapsed : 0;
+    adjustedGrowthPerDay = baseGrowthPerDay;
 
     if (baseGrowthPerDay <= 0 && scenarioPct === 0) {
       currentPaceLine = "At your current trend, growth has been flat or negative.";
@@ -832,7 +892,7 @@ function showGoalPlan(data) {
     if (scenarioPct > 0 && latestTransactions?.discretionary_spend_30d) {
       const extraMonthly = latestTransactions.discretionary_spend_30d * (scenarioPct / 100);
       const extraDaily = extraMonthly / 30;
-      const adjustedGrowthPerDay = baseGrowthPerDay + extraDaily;
+      adjustedGrowthPerDay = baseGrowthPerDay + extraDaily;
       if (adjustedGrowthPerDay > 0) {
         const adjustedYears = remaining / adjustedGrowthPerDay / 365;
         scenarioLine = `<p>Cutting discretionary spending ${scenarioPct}%: ~${adjustedYears.toFixed(1)} years (adds ~${formatMoney(extraMonthly)}/month).</p>`;
@@ -840,12 +900,125 @@ function showGoalPlan(data) {
     }
   }
 
+  const ageLine = !isNaN(age) && age > 0 ? `<p>You'd be about age ${Math.round(age + years)} in ${years} years.</p>` : "";
+
   goalResultEl.innerHTML = `
     <p><strong>Here's your plan:</strong></p>
     <p>${currentPaceLine}</p>
     ${scenarioLine}
-    <p>To hit this in 5 years at a 7%/yr estimate: save ~${formatMoney(requiredMonthly)}/month.</p>
-    <p class="beta-disclaimer">Forecast is in beta — a planning estimate, not a guarantee.</p>  `;
+    ${ageLine}
+    <p>To hit this in ${years} year${years == 1 ? "" : "s"} at a 7%/yr estimate: save ~${formatMoney(requiredMonthly)}/month.</p>
+    <p class="beta-disclaimer">Forecast is in beta, a planning estimate, not a guarantee.</p>
+  `;
+
+  renderTrajectoryGraph(data, years, adjustedGrowthPerDay || baseGrowthPerDay, goal);
+  renderSpendingGraph();
+}
+
+// ---------------------------------------------------------------
+// Net worth trajectory graph — historical line + projected continuation
+// ---------------------------------------------------------------
+
+function renderTrajectoryGraph(data, years, dailyGrowthRate, goal) {
+  const canvas = forecastTrajectoryCanvasEl;
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  ctx.clearRect(0, 0, width, height);
+
+  const history = data.history ?? [];
+  if (history.length < 2) {
+    ctx.font = "13px Manrope, sans-serif";
+    ctx.fillStyle = "#7C948A";
+    ctx.fillText("Need a bit more history to project this.", 10, height / 2);
+    return;
+  }
+
+  const projectedDays = years * 365;
+  const lastPoint = history[history.length - 1];
+  const projectedFinalValue = lastPoint.net_worth + dailyGrowthRate * projectedDays;
+
+  const allValues = [...history.map((h) => h.net_worth), projectedFinalValue, goal];
+  const min = Math.min(...allValues);
+  const max = Math.max(...allValues);
+  const range = max - min || 1;
+  const padding = 10;
+  const totalPoints = history.length + 1; // +1 for the projected endpoint
+
+  const xFor = (i) => padding + (i / (totalPoints - 1)) * (width - padding * 2);
+  const yFor = (v) => height - padding - ((v - min) / range) * (height - padding * 2);
+
+  // Historical line (solid)
+  ctx.beginPath();
+  ctx.strokeStyle = "#00D9A3";
+  ctx.lineWidth = 2;
+  history.forEach((point, i) => {
+    const x = xFor(i);
+    const y = yFor(point.net_worth);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Projected line (dashed) from the last real point to the projected point
+  ctx.beginPath();
+  ctx.setLineDash([5, 5]);
+  ctx.strokeStyle = "#7C948A";
+  ctx.lineWidth = 2;
+  ctx.moveTo(xFor(history.length - 1), yFor(lastPoint.net_worth));
+  ctx.lineTo(xFor(history.length), yFor(projectedFinalValue));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Goal line (horizontal reference)
+  const goalY = yFor(goal);
+  ctx.beginPath();
+  ctx.strokeStyle = "#D9A24F";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 4]);
+  ctx.moveTo(padding, goalY);
+  ctx.lineTo(width - padding, goalY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// ---------------------------------------------------------------
+// Current spending graph — simple bar chart by category, last 30 days
+// ---------------------------------------------------------------
+
+function renderSpendingGraph() {
+  const canvas = forecastSpendingCanvasEl;
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  ctx.clearRect(0, 0, width, height);
+
+  const breakdown = (latestTransactions?.category_breakdown_30d ?? []).slice(0, 6);
+  if (breakdown.length === 0) {
+    ctx.font = "13px Manrope, sans-serif";
+    ctx.fillStyle = "#7C948A";
+    ctx.fillText("No spending data yet.", 10, height / 2);
+    return;
+  }
+
+  const max = Math.max(...breakdown.map((b) => b.total));
+  const padding = 10;
+  const barWidth = (width - padding * 2) / breakdown.length - 10;
+
+  breakdown.forEach((b, i) => {
+    const barHeight = (b.total / max) * (height - padding * 2 - 20);
+    const x = padding + i * ((width - padding * 2) / breakdown.length) + 5;
+    const y = height - padding - barHeight;
+
+    ctx.fillStyle = "#00D9A3";
+    ctx.fillRect(x, y, barWidth, barHeight);
+
+    ctx.font = "10px Manrope, sans-serif";
+    ctx.fillStyle = "#7C948A";
+    ctx.textAlign = "center";
+    const label = b.category.replaceAll("_", " ").toLowerCase().slice(0, 10);
+    ctx.fillText(label, x + barWidth / 2, height - 2);
+  });
 }
 
 // ---------------------------------------------------------------
@@ -915,7 +1088,7 @@ function updateInvestResult() {
     investResultEl.innerHTML = `
       ${tickerLine}
       <p>At a 7%/yr estimate: ${formatMoney(futureValue)} in ${years} year${years == 1 ? "" : "s"}</p>
-      <p>(${formatMoney(gain)} of growth — a rough market-average estimate, not ${latestTickerQuote ? latestTickerQuote.ticker + "-specific" : "a guarantee"})</p>
+      <p>(${formatMoney(gain)} of growth, a rough market-average estimate, not ${latestTickerQuote ? latestTickerQuote.ticker + "-specific" : "a guarantee"})</p>
     `;
     return;
   }
@@ -930,7 +1103,7 @@ function updateInvestResult() {
   investResultEl.innerHTML = `
     ${tickerLine}
     <p>${formatMoney(amount)}/${cadence.replace("ly", "")} at 7%/yr: ${formatMoney(futureValue)} in ${years} year${years == 1 ? "" : "s"}</p>
-    <p>(${formatMoney(totalContributed)} contributed · ${formatMoney(gain)} of growth — a rough estimate, not a guarantee)</p>
+    <p>(${formatMoney(totalContributed)} contributed · ${formatMoney(gain)} of growth, a rough estimate, not a guarantee)</p>
   `;
 }
 
@@ -1074,7 +1247,7 @@ bookCallBtnEl.addEventListener("click", (e) => {
   if (bookCallBtnEl.getAttribute("href") === "#") {
     e.preventDefault();
     const topic = bookCallTopicEl.value || "General";
-    const subject = encodeURIComponent(`Ledger call — ${topic}`);
+    const subject = encodeURIComponent(`Ledger call: ${topic}`);
     window.location.href = `mailto:${BOOKING_EMAIL}?subject=${subject}`;
   }
 });
@@ -1090,20 +1263,115 @@ faqQuestionSubmitEl.addEventListener("click", () => {
   const body = encodeURIComponent(question);
   window.location.href = `mailto:${BOOKING_EMAIL}?subject=${subject}&body=${body}`;
   faqQuestionInputEl.value = "";
+  faqQuestionStatusEl.textContent = "Your question has been submitted. You'll hear back within 1-2 business days.";
 });
 
 // ---------------------------------------------------------------
-// Settings — name/email saved locally, prefills the book-a-call flow
+// Settings — personal info saved locally, prefills the book-a-call flow
 // ---------------------------------------------------------------
 
-settingsNameEl.value = localStorage.getItem("ledger_settings_name") ?? "";
+settingsFirstNameEl.value = localStorage.getItem("ledger_settings_first_name") ?? "";
+settingsLastNameEl.value = localStorage.getItem("ledger_settings_last_name") ?? "";
 settingsEmailEl.value = localStorage.getItem("ledger_settings_email") ?? "";
+settingsPhoneEl.value = localStorage.getItem("ledger_settings_phone") ?? "";
+settingsAgeEl.value = localStorage.getItem("ledger_settings_age") ?? "";
+settingsBirthdayEl.value = localStorage.getItem("ledger_settings_birthday") ?? "";
 
 settingsSaveBtnEl.addEventListener("click", () => {
-  localStorage.setItem("ledger_settings_name", settingsNameEl.value.trim());
+  localStorage.setItem("ledger_settings_first_name", settingsFirstNameEl.value.trim());
+  localStorage.setItem("ledger_settings_last_name", settingsLastNameEl.value.trim());
   localStorage.setItem("ledger_settings_email", settingsEmailEl.value.trim());
+  localStorage.setItem("ledger_settings_phone", settingsPhoneEl.value.trim());
+  localStorage.setItem("ledger_settings_age", settingsAgeEl.value.trim());
+  localStorage.setItem("ledger_settings_birthday", settingsBirthdayEl.value.trim());
   settingsSaveStatusEl.textContent = "Saved.";
   setTimeout(() => (settingsSaveStatusEl.textContent = ""), 2000);
+});
+
+// ---------------------------------------------------------------
+// Theme toggle — light/dark, saved locally
+// ---------------------------------------------------------------
+
+const savedTheme = localStorage.getItem("ledger_theme") ?? "dark";
+document.documentElement.setAttribute("data-theme", savedTheme);
+document.querySelectorAll(".theme-toggle-btn").forEach((btn) => {
+  btn.classList.toggle("active", btn.dataset.theme === savedTheme);
+  btn.addEventListener("click", () => {
+    document.documentElement.setAttribute("data-theme", btn.dataset.theme);
+    localStorage.setItem("ledger_theme", btn.dataset.theme);
+    document.querySelectorAll(".theme-toggle-btn").forEach((b) => b.classList.toggle("active", b === btn));
+  });
+});
+
+// ---------------------------------------------------------------
+// Connected banks list + disconnect
+// ---------------------------------------------------------------
+
+function renderSettingsAccounts(data) {
+  const items = new Map();
+  for (const acct of data.accounts ?? []) {
+    if (!items.has(acct.item_id)) {
+      items.set(acct.item_id, acct.institution_name ?? "Connected bank");
+    }
+  }
+
+  if (items.size === 0) {
+    settingsAccountsListEl.innerHTML = `<div class="empty-state">No banks connected yet.</div>`;
+    return;
+  }
+
+  settingsAccountsListEl.innerHTML = Array.from(items.entries())
+    .map(
+      ([itemId, name]) => `
+      <div class="settings-account-row">
+        <span>${name}</span>
+        <button class="disconnect-btn" data-item-id="${itemId}">Disconnect</button>
+      </div>`
+    )
+    .join("");
+
+  settingsAccountsListEl.querySelectorAll(".disconnect-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Disconnect this bank? You can reconnect it later.")) return;
+      btn.disabled = true;
+      btn.textContent = "Disconnecting…";
+      try {
+        await callFunction("disconnect-item", { item_id: btn.dataset.itemId });
+        await loadEverything();
+      } catch (err) {
+        btn.textContent = "Failed";
+        console.error(err);
+      }
+    });
+  });
+}
+
+// ---------------------------------------------------------------
+// Invite friends — native share sheet, falls back to clipboard copy
+// ---------------------------------------------------------------
+
+inviteFriendsBtnEl.addEventListener("click", async () => {
+  const shareData = {
+    title: "Ledger",
+    text: "Check out Ledger, a net-worth based finance app.",
+    url: window.location.origin + window.location.pathname,
+  };
+
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+    } catch (err) {
+      // User cancelled the share sheet, nothing to do.
+    }
+  } else {
+    try {
+      await navigator.clipboard.writeText(shareData.url);
+      inviteStatusEl.textContent = "Link copied to clipboard.";
+      setTimeout(() => (inviteStatusEl.textContent = ""), 2000);
+    } catch (err) {
+      inviteStatusEl.textContent = shareData.url;
+    }
+  }
 });
 
 loadEverything();

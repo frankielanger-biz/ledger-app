@@ -29,7 +29,7 @@
       <button class="topnav-tab" data-tab="faq">FAQ</button>
       <button class="topnav-tab" data-tab="resources">Resources</button>
       <button class="topnav-tab" data-tab="settings">Settings</button>
-      <button class="topnav-tab" data-tab="beta">Beta</button>
+      <button class="topnav-tab" data-tab="beta">In Progress</button>
     </div>
   </nav>
 
@@ -43,18 +43,20 @@
     <div class="resource-card">
       <div class="resource-card-title">What this is</div>
       <div class="resource-card-desc">
-        Ledger connects to your bank and shows your real net worth — the balance sheet of your
-        life. Not a budgeting app. It's built around one idea: check your actual financial position
-        before you decide, not after.
+        Ledger is a tool and platform to manage your finances through the lens of your net worth.
+        That includes all your assets, cash, investments, property, everything you own, weighed
+        against everything you owe. It's not a budgeting app. It's built around one idea: check
+        your real financial position before you decide, not after.
       </div>
     </div>
 
     <div class="resource-card">
       <div class="resource-card-title">Who it's for</div>
       <div class="resource-card-desc">
-        Anyone who wants to see their whole financial picture in one place and think about money
-        decisions the way you'd run a business — runway, leverage, trajectory — instead of just
-        categories and monthly limits.
+        Anyone who wants a holistic view of their finances and to grow their financial literacy.
+        Ledger is meant to help you engage with your money in an empowering way, not an
+        overwhelming one, whether that's your first time really looking at your finances or
+        you've been tracking them for years.
       </div>
     </div>
 
@@ -72,7 +74,7 @@
 
     <header class="topbar">
       <span id="topbar-status" class="topbar-status"></span>
-      <button id="discrete-toggle-btn" class="icon-btn" title="Discrete mode">◐</button>
+      <button id="discrete-toggle-btn" class="icon-btn" title="Discrete mode">👁</button>
       <button id="refresh-btn" class="icon-btn" title="Refresh">↻</button>
     </header>
 
@@ -207,7 +209,7 @@
 
       <div id="no-brokerage-panel" class="no-brokerage-panel hidden">
         <p>
-          A brokerage account is where you actually buy stocks/funds — it's separate from your bank.
+          A brokerage account is where you actually buy stocks and funds. It's separate from your bank.
           Fidelity, Schwab, and Robinhood are common, free starting points, usually open in a few
           minutes online.
         </p>
@@ -215,7 +217,7 @@
 
       <div id="invest-inputs-wrap">
         <div class="check-input-row">
-          <input type="text" id="invest-ticker" placeholder="Ticker — SPY, QQQ, AAPL…" autocapitalize="characters" />
+          <input type="text" id="invest-ticker" placeholder="Ticker, e.g. SPY, QQQ, AAPL" autocapitalize="characters" />
         </div>
         <div id="invest-ticker-quote" class="ticker-result"></div>
 
@@ -257,6 +259,18 @@
         <input type="number" id="goal-input" inputmode="decimal" placeholder="e.g. 1000000" />
       </div>
 
+      <div class="forecast-mini-inputs">
+        <div class="forecast-mini-field">
+          <label for="goal-years">Over next</label>
+          <input type="number" id="goal-years" inputmode="decimal" placeholder="5" value="5" />
+          <span>years</span>
+        </div>
+        <div class="forecast-mini-field">
+          <label for="user-age">Your age</label>
+          <input type="number" id="user-age" inputmode="decimal" placeholder="optional" />
+        </div>
+      </div>
+
       <div class="scenario-row">
         <span class="scenario-label">Cut discretionary spending by:</span>
         <select id="scenario-select">
@@ -268,6 +282,16 @@
 
       <button id="forecast-plan-btn" class="forecast-btn">See my plan</button>
       <div id="goal-result" class="goal-result"></div>
+
+      <div class="forecast-graph-block">
+        <div class="section-label">Net worth trajectory</div>
+        <canvas id="forecast-trajectory-canvas" width="600" height="140"></canvas>
+      </div>
+
+      <div class="forecast-graph-block">
+        <div class="section-label">Current spending, last 30 days</div>
+        <canvas id="forecast-spending-canvas" width="600" height="140"></canvas>
+      </div>
     </section>
 
   </section>
@@ -283,13 +307,13 @@
         <option value="Investments">Investments</option>
         <option value="Insurance">Insurance</option>
         <option value="Retirement planning">Retirement planning</option>
-        <option value="General financial advice">General financial advice</option>
+        <option value="General finance">General finance</option>
         <option value="Other">Other</option>
       </select>
       <a id="book-call-btn" class="book-call-btn" href="#" target="_blank" rel="noopener">
         Book a call
       </a>
-      <div class="placeholder-note">Calendly link pending — placeholder for now</div>
+      <div class="placeholder-note">Calendly link pending, placeholder for now</div>
     </div>
   </section>
 
@@ -302,7 +326,7 @@
       <div class="faq-question">Is my data safe? <span>+</span></div>
       <div class="faq-answer">
         Ledger connects to your accounts through Plaid, the same connection technology used by
-        thousands of financial apps. Ledger never sees or stores your bank login — Plaid handles
+        thousands of financial apps. Ledger never sees or stores your bank login. Plaid handles
         that directly. The connection is read-only: nothing in this app can move money or make
         changes to your accounts.
       </div>
@@ -335,14 +359,68 @@
 
     <div class="ask-question-box">
       <div class="resource-card-title">Have a question that's not here?</div>
+      <div class="faq-response-note">We generally respond within 1-2 business days.</div>
       <textarea id="faq-question-input" placeholder="Type your question…" rows="3"></textarea>
       <button id="faq-question-submit" class="book-call-btn manual-submit-btn">Submit</button>
+      <div id="faq-question-status" class="dashboard-status"></div>
     </div>
   </section>
 
   <!-- ===================== RESOURCES TAB (education content lives here) ===================== -->
   <section class="page-panel tab-panel hidden" data-panel="resources">
     <div class="page-title">Resources</div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">What's a stock?</div>
+      <div class="resource-card-desc">
+        A stock represents part ownership, or equity, in a company. When you buy a share of common
+        stock, you're entitled to any dividends the company declares and pays, and your return
+        depends on how the company performs. There's no guaranteed return.
+      </div>
+      <div class="resource-source">Source: Investor.gov (U.S. SEC)</div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">What's a bond?</div>
+      <div class="resource-card-desc">
+        A bond is a debt obligation, essentially an IOU. When you buy a bond, you're lending money
+        to the company or government that issued it. In return, the issuer commits to pay interest
+        on the principal and, in most cases, return the principal when the bond matures.
+      </div>
+      <div class="resource-source">Source: Investor.gov (U.S. SEC)</div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">What's an ETF?</div>
+      <div class="resource-card-desc">
+        An ETF (exchange-traded fund) is an investment product registered with the SEC that pools
+        money from many investors into a portfolio of stocks, bonds, or other assets. Each share
+        represents your proportional ownership of that portfolio and the income it generates.
+      </div>
+      <div class="resource-source">Source: Investor.gov (U.S. SEC)</div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">What's a typical yearly return?</div>
+      <div class="resource-card-desc">
+        The S&P 500's historic average annual return is often cited at around 10%. Over the 30
+        years from January 1996 through December 2025, its average annual return was 10.4%. Any
+        single year can swing sharply in either direction, and past performance doesn't guarantee
+        future results.
+      </div>
+      <div class="resource-source">Source: Fidelity</div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">What's an IRA?</div>
+      <div class="resource-card-desc">
+        An IRA (individual retirement arrangement) is a tax-advantaged personal savings plan. A
+        traditional IRA lets contributions be tax-deductible now, with withdrawals taxed later. A
+        Roth IRA doesn't give you that upfront deduction, but qualified withdrawals in retirement
+        are tax-free.
+      </div>
+      <div class="resource-source">Source: IRS.gov</div>
+    </div>
 
     <div class="resource-card">
       <div class="resource-card-title">Understanding your runway</div>
@@ -364,56 +442,15 @@
     <div class="resource-card">
       <div class="resource-card-title">Why net worth, not income</div>
       <div class="resource-card-desc">
-        Income shows what's coming in. Net worth shows what you've actually built — everything you
+        Income shows what's coming in. Net worth shows what you've actually built, everything you
         own minus everything you owe. It's a more complete picture for big decisions.
-      </div>
-    </div>
-
-    <div class="resource-card">
-      <div class="resource-card-title">What's a stock?</div>
-      <div class="resource-card-desc">
-        A small ownership stake in a company. If the company does well, the stock's value tends to
-        rise (and the reverse if it doesn't) — there's no guaranteed return.
-      </div>
-    </div>
-
-    <div class="resource-card">
-      <div class="resource-card-title">What's a bond?</div>
-      <div class="resource-card-desc">
-        A loan you make to a company or government, paid back with interest over a set term.
-        Generally lower risk and lower return than stocks.
-      </div>
-    </div>
-
-    <div class="resource-card">
-      <div class="resource-card-title">What's an ETF?</div>
-      <div class="resource-card-desc">
-        A single fund holding many stocks or bonds at once (e.g., SPY holds all S&P 500 companies).
-        A common way to diversify without picking individual stocks.
-      </div>
-    </div>
-
-    <div class="resource-card">
-      <div class="resource-card-title">What's a typical yearly return?</div>
-      <div class="resource-card-desc">
-        The S&P 500's long-run average is often cited around 7-10%/year before inflation — but any
-        single year can be sharply positive or negative. Past performance doesn't guarantee future
-        results.
-      </div>
-    </div>
-
-    <div class="resource-card">
-      <div class="resource-card-title">What's an IRA?</div>
-      <div class="resource-card-desc">
-        A tax-advantaged retirement account. Traditional IRA contributions may reduce your taxable
-        income now; Roth IRA contributions grow tax-free and withdraw tax-free in retirement.
       </div>
     </div>
 
     <div class="resource-card">
       <div class="resource-card-title">Historical "what if I'd invested" charts</div>
       <div class="resource-card-desc">
-        Under construction — showing real historical performance (e.g., "$1,000 in NVIDIA 5 years
+        Under construction. Showing real historical performance (e.g., "$1,000 in NVIDIA 5 years
         ago") needs a paid historical-data source we haven't added yet. The ticker lookup in Manage
         shows today's real price in the meantime.
       </div>
@@ -424,14 +461,34 @@
   <section class="page-panel tab-panel hidden" data-panel="settings">
     <div class="page-title">Settings</div>
 
-    <div class="settings-field">
-      <label for="settings-name">Name</label>
-      <input type="text" id="settings-name" placeholder="Your name" />
+    <div class="settings-section-label">Personal info</div>
+    <div class="settings-grid">
+      <div class="settings-field">
+        <label for="settings-first-name">First name</label>
+        <input type="text" id="settings-first-name" placeholder="First name" />
+      </div>
+      <div class="settings-field">
+        <label for="settings-last-name">Last name</label>
+        <input type="text" id="settings-last-name" placeholder="Last name" />
+      </div>
     </div>
-
     <div class="settings-field">
       <label for="settings-email">Email</label>
       <input type="email" id="settings-email" placeholder="you@email.com" />
+    </div>
+    <div class="settings-field">
+      <label for="settings-phone">Phone</label>
+      <input type="tel" id="settings-phone" placeholder="(555) 555-5555" />
+    </div>
+    <div class="settings-grid">
+      <div class="settings-field">
+        <label for="settings-age">Age</label>
+        <input type="number" id="settings-age" placeholder="Age" />
+      </div>
+      <div class="settings-field">
+        <label for="settings-birthday">Birthday</label>
+        <input type="date" id="settings-birthday" />
+      </div>
     </div>
 
     <button id="settings-save-btn" class="book-call-btn manual-submit-btn">Save</button>
@@ -439,21 +496,49 @@
 
     <div class="settings-divider"></div>
 
-    <div class="resource-card-title">Notifications</div>
+    <div class="settings-section-label">Appearance</div>
     <div class="settings-field settings-field-row">
-      <span>Text updates</span>
-      <span class="coming-soon-pill">Coming soon</span>
+      <span>Theme</span>
+      <div class="theme-toggle">
+        <button class="theme-toggle-btn active" data-theme="dark">Dark</button>
+        <button class="theme-toggle-btn" data-theme="light">Light</button>
+      </div>
     </div>
-    <div class="settings-field settings-field-row">
-      <span>Email updates</span>
-      <span class="coming-soon-pill">Coming soon</span>
+
+    <div class="settings-divider"></div>
+
+    <div class="settings-section-label">Notifications</div>
+    <div class="notification-card">
+      <div class="notification-row">
+        <span>Text updates</span>
+        <span class="coming-soon-pill">Coming soon</span>
+      </div>
+      <div class="notification-row">
+        <span>Email updates</span>
+        <span class="coming-soon-pill">Coming soon</span>
+      </div>
+      <div class="notification-row">
+        <span>Purchase alerts</span>
+        <span class="coming-soon-pill">Coming soon</span>
+      </div>
     </div>
+
+    <div class="settings-divider"></div>
+
+    <div class="settings-section-label">Connected banks</div>
+    <div id="settings-accounts-list" class="settings-accounts-list"></div>
+
+    <div class="settings-divider"></div>
+
+    <div class="settings-section-label">Invite friends</div>
+    <button id="invite-friends-btn" class="connect-btn">Share Ledger</button>
+    <div id="invite-status" class="dashboard-status"></div>
   </section>
 
-  <!-- ===================== BETA TAB ===================== -->
+  <!-- ===================== IN PROGRESS TAB ===================== -->
   <section class="page-panel tab-panel hidden" data-panel="beta">
-    <div class="page-title">Beta</div>
-    <div class="page-sub">What's in progress, not live yet.</div>
+    <div class="page-title">In Progress</div>
+    <div class="page-sub">What's coming, not live yet.</div>
 
     <div class="resource-card">
       <div class="resource-card-title">Purchase notifications</div>
@@ -462,17 +547,27 @@
 
     <div class="resource-card">
       <div class="resource-card-title">Historical investment charts</div>
-      <div class="resource-card-desc">"$1,000 in X, N years ago" — needs a historical stock data source.</div>
+      <div class="resource-card-desc">"$1,000 in X, N years ago." Needs a historical stock data source.</div>
     </div>
 
     <div class="resource-card">
-      <div class="resource-card-title">Real accounts / multi-user sign-in</div>
-      <div class="resource-card-desc">Needed before more than one person can safely use this app.</div>
+      <div class="resource-card-title">Connect any bank</div>
+      <div class="resource-card-desc">Link an account directly with routing and account number, for banks Plaid doesn't cover yet.</div>
     </div>
 
     <div class="resource-card">
-      <div class="resource-card-title">More banks (beyond Chase)</div>
-      <div class="resource-card-desc">More institutions as Plaid access expands.</div>
+      <div class="resource-card-title">More institutions</div>
+      <div class="resource-card-desc">More banks beyond Chase, as Plaid access expands.</div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">Ledger AI</div>
+      <div class="resource-card-desc">A built-in assistant for questions about your own numbers: investments, spending, planning.</div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">Loose budget builder</div>
+      <div class="resource-card-desc">Ledger isn't a budgeting app, but a light, optional budget view is coming for people who want one.</div>
     </div>
   </section>
 
