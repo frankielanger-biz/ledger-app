@@ -11,6 +11,7 @@ const totalLiabilitiesValueEl = document.getElementById("total-liabilities-value
 const accountsListEl = document.getElementById("accounts-list");
 const connectBtn = document.getElementById("connect-btn");
 const refreshBtn = document.getElementById("refresh-btn");
+const topbarStatusEl = document.getElementById("topbar-status");
 const affordInput = document.getElementById("afford-input");
 const affordCategoryEl = document.getElementById("afford-category");
 const affordResult = document.getElementById("afford-result");
@@ -35,6 +36,13 @@ const investYearsEl = document.getElementById("invest-years");
 const investCadenceEl = document.getElementById("invest-cadence");
 const investResultEl = document.getElementById("invest-result");
 const allocationListEl = document.getElementById("allocation-list");
+const addManualBtnEl = document.getElementById("add-manual-btn");
+const addManualFormEl = document.getElementById("add-manual-form");
+const manualLabelEl = document.getElementById("manual-label");
+const manualAmountEl = document.getElementById("manual-amount");
+const manualCategoryEl = document.getElementById("manual-category");
+const manualSubmitBtnEl = document.getElementById("manual-submit-btn");
+const manualAddStatusEl = document.getElementById("manual-add-status");
 const ledgerBrandEl = document.querySelector(".topnav-brand");
 
 let latestBalances = null;
@@ -163,7 +171,7 @@ connectBtn.addEventListener("click", async () => {
 
 async function loadEverything() {
   refreshBtn.classList.add("spinning");
-  dashboardStatus.textContent = "Refreshing…";
+  topbarStatusEl.textContent = "Pulling balances…";
 
   try {
     const balances = await callFunction("get-balances");
@@ -174,11 +182,13 @@ async function loadEverything() {
     renderAllocation(balances);
     renderGoal(balances);
   } catch (err) {
+    topbarStatusEl.textContent = "";
     dashboardStatus.textContent = `Couldn't load balances: ${err.message}`;
     refreshBtn.classList.remove("spinning");
     return;
   }
 
+  topbarStatusEl.textContent = "Gathering transactions…";
   try {
     const transactions = await callFunction("get-transactions");
     latestTransactions = transactions;
@@ -189,6 +199,8 @@ async function loadEverything() {
 
   renderScore();
   if (scoreFlipInnerEl.classList.contains("flipped")) renderSpendingBreakdown();
+  syncFlipHeight();
+  topbarStatusEl.textContent = "";
   dashboardStatus.textContent = "";
   refreshBtn.classList.remove("spinning");
 }
@@ -282,17 +294,30 @@ affordCategoryEl.addEventListener("change", updateAffordResult);
 //   Trajectory (15%) — net worth growth over the last ~6 months
 // ---------------------------------------------------------------
 
-const GAUGE_RADIUS = 65;
+const GAUGE_RADIUS = 78;
 const GAUGE_CIRCUMFERENCE = 2 * Math.PI * GAUGE_RADIUS;
 scoreGaugeFillEl.style.strokeDasharray = `${GAUGE_CIRCUMFERENCE}`;
 scoreGaugeFillEl.style.strokeDashoffset = `${GAUGE_CIRCUMFERENCE}`;
 
 let scoreComponentsCache = [];
 
+// Light green (low score) to deep green (high score) — always green, never
+// red/yellow, just a richer shade as the number improves.
+function scoreColor(score) {
+  const pct = clamp(score, 0, 100) / 100;
+  const light = { r: 167, g: 230, b: 205 }; // pale mint
+  const deep = { r: 0, g: 158, b: 112 }; // rich emerald
+  const r = Math.round(light.r + (deep.r - light.r) * pct);
+  const g = Math.round(light.g + (deep.g - light.g) * pct);
+  const b = Math.round(light.b + (deep.b - light.b) * pct);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
 function setGauge(score) {
   const pct = clamp(score, 0, 100) / 100;
   const offset = GAUGE_CIRCUMFERENCE * (1 - pct);
   scoreGaugeFillEl.style.strokeDashoffset = `${offset}`;
+  scoreGaugeFillEl.style.stroke = scoreColor(score);
 }
 
 function renderScore() {
@@ -409,9 +434,22 @@ function renderScore() {
   });
 }
 
+// Keeps the flip card's actual height matched to whichever face is
+// currently showing — without this, the card stays sized to whichever
+// face rendered first and the other face's content overlaps whatever
+// comes after it on the page.
+function syncFlipHeight() {
+  const showingBack = scoreFlipInnerEl.classList.contains("flipped");
+  const face = showingBack
+    ? document.querySelector(".score-face-back")
+    : document.querySelector(".score-face-front");
+  scoreFlipInnerEl.style.height = `${face.scrollHeight}px`;
+}
+
 // Tap the gauge to expand/collapse the breakdown.
 scoreGaugeWrapEl.addEventListener("click", () => {
   scoreBreakdownEl.classList.toggle("expanded");
+  syncFlipHeight();
 });
 
 // Flip card — front (score) <-> back (spending breakdown)
@@ -419,11 +457,13 @@ scoreFlipBtnFrontEl.addEventListener("click", (e) => {
   e.stopPropagation();
   scoreFlipInnerEl.classList.add("flipped");
   renderSpendingBreakdown();
+  syncFlipHeight();
 });
 
 scoreFlipBtnBackEl.addEventListener("click", (e) => {
   e.stopPropagation();
   scoreFlipInnerEl.classList.remove("flipped");
+  syncFlipHeight();
 });
 
 // ---------------------------------------------------------------
@@ -448,6 +488,7 @@ document.querySelectorAll(".spending-period-btn").forEach((btn) => {
     spendingPeriod = btn.dataset.period;
     document.querySelectorAll(".spending-period-btn").forEach((b) => b.classList.toggle("active", b === btn));
     renderSpendingBreakdown();
+    syncFlipHeight();
   });
 });
 
@@ -754,23 +795,33 @@ investCadenceEl.addEventListener("change", updateInvestResult);
 // ---------------------------------------------------------------
 
 function renderAllocation(data) {
-  const buckets = { Cash: 0, Investments: 0, "Real estate": 0, Other: 0 };
+  const buckets = {
+    Cash: { total: 0, items: [] },
+    Investments: { total: 0, items: [] },
+    "Real estate": { total: 0, items: [] },
+    Other: { total: 0, items: [] },
+  };
 
   for (const acct of data.accounts ?? []) {
     if (acct.type === "credit" || acct.type === "loan") continue;
     const balance = acct.current ?? 0;
-    if (acct.type === "investment") buckets["Investments"] += balance;
-    else if (acct.type === "depository") buckets["Cash"] += balance;
-    else buckets["Other"] += balance;
+    const label = `${acct.name}${acct.institution_name ? " · " + acct.institution_name : ""}`;
+    if (acct.type === "investment") buckets["Investments"].items.push({ label, amount: balance });
+    else if (acct.type === "depository") buckets["Cash"].items.push({ label, amount: balance });
+    else buckets["Other"].items.push({ label, amount: balance });
   }
 
   for (const item of data.manual_items ?? []) {
     if (item.amount <= 0) continue;
-    if (item.category === "real_estate") buckets["Real estate"] += item.amount;
-    else buckets["Other"] += item.amount;
+    const bucket = item.category === "real_estate" ? "Real estate" : "Other";
+    buckets[bucket].items.push({ label: item.label, amount: item.amount });
   }
 
-  const total = Object.values(buckets).reduce((sum, v) => sum + v, 0);
+  for (const key of Object.keys(buckets)) {
+    buckets[key].total = buckets[key].items.reduce((sum, i) => sum + i.amount, 0);
+  }
+
+  const total = Object.values(buckets).reduce((sum, b) => sum + b.total, 0);
 
   if (total <= 0) {
     allocationListEl.innerHTML = `<div class="empty-state">Connect accounts to see your allocation.</div>`;
@@ -778,18 +829,66 @@ function renderAllocation(data) {
   }
 
   allocationListEl.innerHTML = Object.entries(buckets)
-    .filter(([, value]) => value > 0)
-    .sort((a, b) => b[1] - a[1])
-    .map(([label, value]) => {
-      const pct = (value / total) * 100;
+    .filter(([, b]) => b.total > 0)
+    .sort((a, b) => b[1].total - a[1].total)
+    .map(([label, bucket], i) => {
+      const pct = (bucket.total / total) * 100;
+      const detailRows = bucket.items
+        .map((item) => `<div class="account-detail-row"><span>${item.label}</span><span>${formatMoney(item.amount)}</span></div>`)
+        .join("");
       return `
-        <div class="list-row">
-          <span>${label}</span>
-          <span class="mono">${pct.toFixed(0)}% · ${formatMoney(value)}</span>
+        <div>
+          <div class="list-row allocation-row-clickable" data-idx="${i}">
+            <span>${label}</span>
+            <span class="mono">${pct.toFixed(0)}% · ${formatMoney(bucket.total)}</span>
+          </div>
+          <div class="allocation-detail hidden" data-idx="${i}">${detailRows}</div>
         </div>`;
     })
     .join("");
+
+  allocationListEl.querySelectorAll(".allocation-row-clickable").forEach((row) => {
+    row.addEventListener("click", () => {
+      const idx = row.dataset.idx;
+      allocationListEl.querySelector(`.allocation-detail[data-idx="${idx}"]`).classList.toggle("hidden");
+    });
+  });
 }
+
+// ---------------------------------------------------------------
+// Add a manual item (real estate, other assets not connected via Plaid)
+// ---------------------------------------------------------------
+
+addManualBtnEl.addEventListener("click", () => {
+  addManualFormEl.classList.toggle("hidden");
+});
+
+manualSubmitBtnEl.addEventListener("click", async () => {
+  const label = manualLabelEl.value.trim();
+  const amount = parseFloat(manualAmountEl.value);
+  const category = manualCategoryEl.value;
+
+  if (!label || isNaN(amount)) {
+    manualAddStatusEl.textContent = "Enter a label and a value first.";
+    return;
+  }
+
+  manualSubmitBtnEl.disabled = true;
+  manualAddStatusEl.textContent = "Adding…";
+
+  try {
+    await callFunction("add-manual-item", { label, amount, category });
+    manualLabelEl.value = "";
+    manualAmountEl.value = "";
+    manualAddStatusEl.textContent = "Added.";
+    addManualFormEl.classList.add("hidden");
+    await loadEverything();
+  } catch (err) {
+    manualAddStatusEl.textContent = `Couldn't add it: ${err.message}`;
+  } finally {
+    manualSubmitBtnEl.disabled = false;
+  }
+});
 
 // ---------------------------------------------------------------
 // PWA — register service worker for installability/offline shell

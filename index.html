@@ -32,6 +32,7 @@
   <main id="dashboard-screen" class="screen tab-panel" data-panel="dashboard">
 
     <header class="topbar">
+      <span id="topbar-status" class="topbar-status"></span>
       <button id="refresh-btn" class="icon-btn" title="Refresh">↻</button>
     </header>
 
@@ -48,10 +49,10 @@
 
           <div class="score-face score-face-front">
             <div class="score-gauge-wrap" id="score-gauge-wrap">
-              <svg class="score-gauge" width="160" height="160" viewBox="0 0 160 160">
-                <circle class="score-gauge-track" cx="80" cy="80" r="65" />
-                <circle class="score-gauge-fill" id="score-gauge-fill" cx="80" cy="80" r="65" />
-                <text class="score-gauge-number" id="score-value" x="80" y="80" text-anchor="middle" dominant-baseline="middle">—</text>
+              <svg class="score-gauge" width="190" height="190" viewBox="0 0 190 190">
+                <circle class="score-gauge-track" cx="95" cy="95" r="78" />
+                <circle class="score-gauge-fill" id="score-gauge-fill" cx="95" cy="95" r="78" />
+                <text class="score-gauge-number" id="score-value" x="95" y="95" text-anchor="middle" dominant-baseline="middle">—</text>
               </svg>
             </div>
             <div class="score-tap-hint">Tap the gauge for a breakdown</div>
@@ -92,7 +93,7 @@
     </section>
 
     <section class="trend-section">
-      <div class="section-label">Net worth trend <span>· touch or hover to scrub</span></div>
+      <div class="section-label">Net worth trend</div>
       <div class="trend-canvas-wrap">
         <canvas id="trend-canvas" width="600" height="120"></canvas>
         <div id="trend-tooltip" class="trend-tooltip"></div>
@@ -120,8 +121,22 @@
     </section>
 
     <section class="allocation-section">
-      <div class="section-label">Asset allocation</div>
+      <div class="section-label">Asset allocation <span>· tap a row to see what's in it</span></div>
       <div id="allocation-list" class="allocation-list"></div>
+      <button id="add-manual-btn" class="connect-btn">+ Add something not connected</button>
+      <div id="add-manual-form" class="add-manual-form hidden">
+        <input type="text" id="manual-label" placeholder="What is it? e.g. Rental property" />
+        <div class="check-input-row">
+          <span class="dollar-sign">$</span>
+          <input type="number" id="manual-amount" inputmode="decimal" placeholder="Value" />
+        </div>
+        <select id="manual-category">
+          <option value="real_estate">Real estate</option>
+          <option value="other">Other asset</option>
+        </select>
+        <button id="manual-submit-btn" class="book-call-btn manual-submit-btn">Add it</button>
+        <div id="manual-add-status" class="dashboard-status"></div>
+      </div>
     </section>
 
     <section class="goal-section">

@@ -37,9 +37,9 @@ html, body {
 
 .topnav {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--hairline);
   max-width: 480px;
   margin: 0 auto;
@@ -55,22 +55,30 @@ html, body {
   border: none;
   cursor: pointer;
   padding: 0;
+  align-self: flex-start;
 }
 
 .topnav-tabs {
   display: flex;
   gap: 4px;
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
+
+.topnav-tabs::-webkit-scrollbar { display: none; }
 
 .topnav-tab {
   background: none;
   border: none;
   color: var(--ink-dim);
   font-family: var(--font-sans);
-  font-size: 14px;
-  padding: 8px 12px;
+  font-size: 13px;
+  padding: 7px 11px;
   border-radius: 6px;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .topnav-tab:hover { color: var(--ink); }
@@ -92,7 +100,14 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 10px;
   padding: 4px 0 8px;
+}
+
+.topbar-status {
+  font-size: 12px;
+  color: var(--ink-dim);
+  font-family: var(--font-mono);
 }
 
 .icon-btn {
@@ -126,7 +141,7 @@ select:focus-visible {
 /* ---------------- Hero (net worth) — centered ---------------- */
 
 .hero {
-  padding: 28px 0 20px;
+  padding: 12px 0 20px;
   border-bottom: 1px solid var(--hairline);
   text-align: center;
 }
@@ -171,9 +186,8 @@ select:focus-visible {
 
 .score-flip-inner {
   position: relative;
-  transition: transform 0.6s;
+  transition: transform 0.6s, height 0.3s;
   transform-style: preserve-3d;
-  min-height: 280px;
 }
 
 .score-flip-inner.flipped {
@@ -219,24 +233,24 @@ select:focus-visible {
 .score-gauge-track {
   fill: none;
   stroke: var(--hairline);
-  stroke-width: 10;
+  stroke-width: 12;
   transform: rotate(-90deg);
-  transform-origin: 80px 80px;
+  transform-origin: 95px 95px;
 }
 
 .score-gauge-fill {
   fill: none;
   stroke: var(--accent);
-  stroke-width: 10;
+  stroke-width: 12;
   stroke-linecap: round;
   transform: rotate(-90deg);
-  transform-origin: 80px 80px;
-  transition: stroke-dasharray 0.6s ease;
+  transform-origin: 95px 95px;
+  transition: stroke-dasharray 0.6s ease, stroke 0.6s ease;
 }
 
 .score-gauge-number {
   font-family: var(--font-mono);
-  font-size: 36px;
+  font-size: 42px;
   font-weight: 500;
   fill: var(--ink);
 }
@@ -540,6 +554,57 @@ select:focus-visible {
   padding: 20px 0;
   border-bottom: 1px solid var(--hairline);
   text-align: center;
+}
+
+.add-manual-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.add-manual-form input[type="text"] {
+  background: var(--bg-raised);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  text-align: center;
+}
+
+.add-manual-form select {
+  background: var(--bg-raised);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  text-align: center;
+  appearance: none;
+}
+
+.manual-submit-btn {
+  width: 100%;
+  border: none;
+}
+
+.account-detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0 4px 12px;
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+
+.allocation-detail {
+  padding-bottom: 6px;
+}
+
+.allocation-row-clickable {
+  cursor: pointer;
 }
 
 .goal-result,
