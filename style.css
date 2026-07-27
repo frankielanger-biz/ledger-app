@@ -550,11 +550,53 @@ select:focus-visible {
 
 .goal-section,
 .invest-section,
-.allocation-section {
+.allocation-section,
+.ticker-section {
   padding: 20px 0;
   border-bottom: 1px solid var(--hairline);
   text-align: center;
 }
+
+#ticker-input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+#ticker-input:focus { outline: none; }
+
+.ticker-lookup-btn {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ticker-result {
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.ticker-result .ticker-price {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.ticker-result .ticker-change.positive { color: var(--positive); }
+.ticker-result .ticker-change.negative { color: var(--negative); }
 
 .add-manual-form {
   display: flex;

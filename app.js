@@ -35,6 +35,9 @@ const investAmountEl = document.getElementById("invest-amount");
 const investYearsEl = document.getElementById("invest-years");
 const investCadenceEl = document.getElementById("invest-cadence");
 const investResultEl = document.getElementById("invest-result");
+const tickerInputEl = document.getElementById("ticker-input");
+const tickerLookupBtnEl = document.getElementById("ticker-lookup-btn");
+const tickerResultEl = document.getElementById("ticker-result");
 const allocationListEl = document.getElementById("allocation-list");
 const addManualBtnEl = document.getElementById("add-manual-btn");
 const addManualFormEl = document.getElementById("add-manual-form");
@@ -789,6 +792,39 @@ function updateInvestResult() {
 investAmountEl.addEventListener("input", updateInvestResult);
 investYearsEl.addEventListener("input", updateInvestResult);
 investCadenceEl.addEventListener("change", updateInvestResult);
+
+// ---------------------------------------------------------------
+// Stock ticker lookup — SPY, QQQ, DIA (Dow), or any individual ticker
+// ---------------------------------------------------------------
+
+async function lookupTicker() {
+  const ticker = tickerInputEl.value.trim();
+  if (!ticker) return;
+
+  tickerLookupBtnEl.disabled = true;
+  tickerResultEl.textContent = "Looking up…";
+
+  try {
+    const quote = await callFunction("get-stock-quote", { ticker });
+    const changeClass = quote.day_change >= 0 ? "positive" : "negative";
+    const changeArrow = quote.day_change >= 0 ? "▲" : "▼";
+
+    tickerResultEl.innerHTML = `
+      <div class="ticker-price">${quote.ticker} · $${quote.price.toFixed(2)}</div>
+      <div class="ticker-change ${changeClass}">${changeArrow} ${Math.abs(quote.day_change).toFixed(2)}% today</div>
+      <div>${quote.name ?? ""}</div>
+    `;
+  } catch (err) {
+    tickerResultEl.textContent = `Couldn't look that up: ${err.message}`;
+  } finally {
+    tickerLookupBtnEl.disabled = false;
+  }
+}
+
+tickerLookupBtnEl.addEventListener("click", lookupTicker);
+tickerInputEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") lookupTicker();
+});
 
 // ---------------------------------------------------------------
 // Asset allocation breakdown
