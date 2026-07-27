@@ -325,6 +325,107 @@ input:focus-visible {
 
 .list-row:last-child { border-bottom: none; }
 
+/* ---------------- Refresh spin feedback ---------------- */
+
+.icon-btn.spinning {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ---------------- Financial health score ---------------- */
+
+.score-section {
+  padding: 20px 0;
+  border-bottom: 0.5px solid var(--hairline);
+}
+
+.score-number {
+  font-family: var(--font-mono);
+  font-size: 48px;
+  font-weight: 500;
+  color: var(--accent);
+  line-height: 1;
+  margin: 8px 0 14px;
+}
+
+.score-breakdown .list-row {
+  font-size: 13px;
+}
+
+.score-weight {
+  color: var(--ink-dim);
+  font-size: 11px;
+}
+
+/* ---------------- Trend graph ---------------- */
+
+.trend-section {
+  padding: 20px 0;
+  border-bottom: 0.5px solid var(--hairline);
+}
+
+#trend-canvas {
+  width: 100%;
+  height: 120px;
+  margin-top: 8px;
+  display: block;
+}
+
+/* ---------------- Discretionary checkbox ---------------- */
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+/* ---------------- Goal + invest sections ---------------- */
+
+.goal-section,
+.invest-section,
+.allocation-section {
+  padding: 20px 0;
+  border-bottom: 0.5px solid var(--hairline);
+}
+
+.goal-result,
+.invest-result {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ink-dim);
+  line-height: 1.6;
+}
+
+.invest-inputs {
+  display: flex;
+  gap: 10px;
+}
+
+.invest-years-row {
+  max-width: 110px;
+}
+
+.years-suffix {
+  font-size: 12px;
+  color: var(--ink-dim);
+  padding-right: 12px;
+  white-space: nowrap;
+}
+
 .list-row .mono {
   font-family: var(--font-mono);
   font-size: 13px;

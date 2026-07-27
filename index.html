@@ -31,6 +31,12 @@
       <div class="hero-delta" id="net-worth-delta"></div>
     </section>
 
+    <section class="score-section">
+      <div class="section-label">Financial health score</div>
+      <div class="score-number" id="score-value">—</div>
+      <div id="score-breakdown" class="score-breakdown"></div>
+    </section>
+
     <section class="ledger">
       <div class="ledger-row">
         <span class="ledger-label">Liquid cash</span>
@@ -46,13 +52,51 @@
       </div>
     </section>
 
+    <section class="trend-section">
+      <div class="section-label">Net worth trend</div>
+      <canvas id="trend-canvas" width="600" height="120"></canvas>
+    </section>
+
     <section class="check-block">
       <div class="check-label">Can I afford it?</div>
       <div class="check-input-row">
         <span class="dollar-sign">$</span>
         <input type="number" id="afford-input" inputmode="decimal" placeholder="0" />
       </div>
+      <label class="checkbox-row">
+        <input type="checkbox" id="afford-discretionary" />
+        <span>This is discretionary spending</span>
+      </label>
       <div id="afford-result" class="afford-result"></div>
+    </section>
+
+    <section class="allocation-section">
+      <div class="section-label">Asset allocation</div>
+      <div id="allocation-list" class="allocation-list"></div>
+    </section>
+
+    <section class="goal-section">
+      <div class="section-label">Goal net worth</div>
+      <div class="check-input-row">
+        <span class="dollar-sign">$</span>
+        <input type="number" id="goal-input" inputmode="decimal" placeholder="e.g. 1000000" />
+      </div>
+      <div id="goal-result" class="goal-result"></div>
+    </section>
+
+    <section class="invest-section">
+      <div class="section-label">What if I invested this instead?</div>
+      <div class="invest-inputs">
+        <div class="check-input-row">
+          <span class="dollar-sign">$</span>
+          <input type="number" id="invest-amount" inputmode="decimal" placeholder="Amount" />
+        </div>
+        <div class="check-input-row invest-years-row">
+          <input type="number" id="invest-years" inputmode="decimal" placeholder="Years" />
+          <span class="years-suffix">years</span>
+        </div>
+      </div>
+      <div id="invest-result" class="invest-result"></div>
     </section>
 
     <section class="accounts">
