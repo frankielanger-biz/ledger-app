@@ -34,6 +34,7 @@ async function callFunction(name, body) {
     headers: {
       "Content-Type": "application/json",
       "x-app-secret": APP_SECRET,
+      "apikey": SUPABASE_ANON_KEY,
     },
     body: JSON.stringify(body ?? {}),
   });
