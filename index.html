@@ -12,7 +12,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
 <link rel="stylesheet" href="style.css" />
 </head>
@@ -21,20 +21,58 @@
   <nav class="topnav">
     <button class="topnav-brand">Ledger</button>
     <div class="topnav-tabs">
+      <button class="topnav-tab" data-tab="getting-started">Getting Started</button>
       <button class="topnav-tab active" data-tab="dashboard">Dashboard</button>
       <button class="topnav-tab" data-tab="manage">Manage</button>
       <button class="topnav-tab" data-tab="forecast">Forecast</button>
+      <button class="topnav-tab" data-tab="book-call">Book a call</button>
       <button class="topnav-tab" data-tab="faq">FAQ</button>
       <button class="topnav-tab" data-tab="resources">Resources</button>
-      <button class="topnav-tab" data-tab="book-call">Book a call</button>
+      <button class="topnav-tab" data-tab="settings">Settings</button>
+      <button class="topnav-tab" data-tab="beta">Beta</button>
     </div>
   </nav>
+
+  <div id="swipe-container" class="swipe-container">
+
+  <!-- ===================== GETTING STARTED TAB ===================== -->
+  <section class="page-panel tab-panel hidden" data-panel="getting-started">
+    <div class="page-title">Getting Started</div>
+    <div class="page-sub">What Ledger is, and who it's for.</div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">What this is</div>
+      <div class="resource-card-desc">
+        Ledger connects to your bank and shows your real net worth — the balance sheet of your
+        life. Not a budgeting app. It's built around one idea: check your actual financial position
+        before you decide, not after.
+      </div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">Who it's for</div>
+      <div class="resource-card-desc">
+        Anyone who wants to see their whole financial picture in one place and think about money
+        decisions the way you'd run a business — runway, leverage, trajectory — instead of just
+        categories and monthly limits.
+      </div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">How to start</div>
+      <div class="resource-card-desc">
+        Head to the Manage tab and connect a bank (Chase for now, more coming). Your dashboard
+        fills in automatically from there.
+      </div>
+    </div>
+  </section>
 
   <!-- ===================== DASHBOARD TAB — glance only, stops after trend ===================== -->
   <main id="dashboard-screen" class="screen tab-panel" data-panel="dashboard">
 
     <header class="topbar">
       <span id="topbar-status" class="topbar-status"></span>
+      <button id="discrete-toggle-btn" class="icon-btn" title="Discrete mode">◐</button>
       <button id="refresh-btn" class="icon-btn" title="Refresh">↻</button>
     </header>
 
@@ -65,8 +103,8 @@
           <div class="score-face score-face-back">
             <div class="section-label">Spending breakdown</div>
             <div class="spending-period-toggle">
-              <button class="spending-period-btn active" data-period="day">Day</button>
-              <button class="spending-period-btn" data-period="week">Week</button>
+              <button class="spending-period-btn" data-period="day">Day</button>
+              <button class="spending-period-btn active" data-period="week">Week</button>
             </div>
             <div class="spending-pie-wrap">
               <canvas id="spending-pie-canvas" width="160" height="160"></canvas>
@@ -209,7 +247,7 @@
   <section class="screen tab-panel hidden" data-panel="forecast">
 
     <div class="page-header">
-      <div class="page-title">Forecast</div>
+      <div class="page-title">Forecast <span class="beta-pill">BETA</span></div>
     </div>
 
     <section class="goal-section">
@@ -218,10 +256,41 @@
         <span class="dollar-sign">$</span>
         <input type="number" id="goal-input" inputmode="decimal" placeholder="e.g. 1000000" />
       </div>
-      <div class="forecast-hint">Press Enter for a full plan</div>
+
+      <div class="scenario-row">
+        <span class="scenario-label">Cut discretionary spending by:</span>
+        <select id="scenario-select">
+          <option value="0">No change</option>
+          <option value="25">25%</option>
+          <option value="50">50%</option>
+        </select>
+      </div>
+
+      <button id="forecast-plan-btn" class="forecast-btn">See my plan</button>
       <div id="goal-result" class="goal-result"></div>
     </section>
 
+  </section>
+
+  <!-- ===================== BOOK A CALL TAB ===================== -->
+  <section class="page-panel tab-panel hidden" data-panel="book-call">
+    <div class="page-title">Book a call</div>
+
+    <div class="book-call-card">
+      <select id="book-call-topic" class="afford-category-select">
+        <option value="">What do you want to talk about?</option>
+        <option value="Understanding my account">Understanding my account</option>
+        <option value="Investments">Investments</option>
+        <option value="Insurance">Insurance</option>
+        <option value="Retirement planning">Retirement planning</option>
+        <option value="General financial advice">General financial advice</option>
+        <option value="Other">Other</option>
+      </select>
+      <a id="book-call-btn" class="book-call-btn" href="#" target="_blank" rel="noopener">
+        Book a call
+      </a>
+      <div class="placeholder-note">Calendly link pending — placeholder for now</div>
+    </div>
   </section>
 
   <!-- ===================== FAQ TAB ===================== -->
@@ -263,9 +332,15 @@
         No. This is read-only. It can see balances and transactions, nothing more.
       </div>
     </div>
+
+    <div class="ask-question-box">
+      <div class="resource-card-title">Have a question that's not here?</div>
+      <textarea id="faq-question-input" placeholder="Type your question…" rows="3"></textarea>
+      <button id="faq-question-submit" class="book-call-btn manual-submit-btn">Submit</button>
+    </div>
   </section>
 
-  <!-- ===================== RESOURCES TAB ===================== -->
+  <!-- ===================== RESOURCES TAB (education content lives here) ===================== -->
   <section class="page-panel tab-panel hidden" data-panel="resources">
     <div class="page-title">Resources</div>
 
@@ -293,34 +368,115 @@
         own minus everything you owe. It's a more complete picture for big decisions.
       </div>
     </div>
-  </section>
 
-  <!-- ===================== BOOK A CALL TAB ===================== -->
-  <section class="page-panel tab-panel hidden" data-panel="book-call">
-    <div class="page-title">Book a call</div>
-
-    <div class="book-call-card">
-      <div class="resource-card-title">Want to talk to a professional? It's free.</div>
-      <p>
-        Confused about a number, a connection, or what the score means — this call is to help you
-        understand your own account.
-      </p>
-      <a class="book-call-btn" href="mailto:frankie@example.com?subject=Ledger%20-%20Account%20Help">
-        Book a free call
-      </a>
+    <div class="resource-card">
+      <div class="resource-card-title">What's a stock?</div>
+      <div class="resource-card-desc">
+        A small ownership stake in a company. If the company does well, the stock's value tends to
+        rise (and the reverse if it doesn't) — there's no guaranteed return.
+      </div>
     </div>
 
-    <div class="book-call-card book-call-card-spaced">
-      <div class="resource-card-title">Want real financial guidance?</div>
-      <p>
-        Investments, insurance, planning — a paid conversation with Frankie directly.
-        <span class="placeholder-note">($50/mo · two 30-min calls — placeholder pricing)</span>
-      </p>
-      <a class="book-call-btn" href="mailto:frankie@example.com?subject=Ledger%20-%20Advisory%20Call">
-        Book a paid call
-      </a>
+    <div class="resource-card">
+      <div class="resource-card-title">What's a bond?</div>
+      <div class="resource-card-desc">
+        A loan you make to a company or government, paid back with interest over a set term.
+        Generally lower risk and lower return than stocks.
+      </div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">What's an ETF?</div>
+      <div class="resource-card-desc">
+        A single fund holding many stocks or bonds at once (e.g., SPY holds all S&P 500 companies).
+        A common way to diversify without picking individual stocks.
+      </div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">What's a typical yearly return?</div>
+      <div class="resource-card-desc">
+        The S&P 500's long-run average is often cited around 7-10%/year before inflation — but any
+        single year can be sharply positive or negative. Past performance doesn't guarantee future
+        results.
+      </div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">What's an IRA?</div>
+      <div class="resource-card-desc">
+        A tax-advantaged retirement account. Traditional IRA contributions may reduce your taxable
+        income now; Roth IRA contributions grow tax-free and withdraw tax-free in retirement.
+      </div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">Historical "what if I'd invested" charts</div>
+      <div class="resource-card-desc">
+        Under construction — showing real historical performance (e.g., "$1,000 in NVIDIA 5 years
+        ago") needs a paid historical-data source we haven't added yet. The ticker lookup in Manage
+        shows today's real price in the meantime.
+      </div>
     </div>
   </section>
+
+  <!-- ===================== SETTINGS TAB ===================== -->
+  <section class="page-panel tab-panel hidden" data-panel="settings">
+    <div class="page-title">Settings</div>
+
+    <div class="settings-field">
+      <label for="settings-name">Name</label>
+      <input type="text" id="settings-name" placeholder="Your name" />
+    </div>
+
+    <div class="settings-field">
+      <label for="settings-email">Email</label>
+      <input type="email" id="settings-email" placeholder="you@email.com" />
+    </div>
+
+    <button id="settings-save-btn" class="book-call-btn manual-submit-btn">Save</button>
+    <div id="settings-save-status" class="dashboard-status"></div>
+
+    <div class="settings-divider"></div>
+
+    <div class="resource-card-title">Notifications</div>
+    <div class="settings-field settings-field-row">
+      <span>Text updates</span>
+      <span class="coming-soon-pill">Coming soon</span>
+    </div>
+    <div class="settings-field settings-field-row">
+      <span>Email updates</span>
+      <span class="coming-soon-pill">Coming soon</span>
+    </div>
+  </section>
+
+  <!-- ===================== BETA TAB ===================== -->
+  <section class="page-panel tab-panel hidden" data-panel="beta">
+    <div class="page-title">Beta</div>
+    <div class="page-sub">What's in progress, not live yet.</div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">Purchase notifications</div>
+      <div class="resource-card-desc">Text or email alert when you spend, tied into the afford-check.</div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">Historical investment charts</div>
+      <div class="resource-card-desc">"$1,000 in X, N years ago" — needs a historical stock data source.</div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">Real accounts / multi-user sign-in</div>
+      <div class="resource-card-desc">Needed before more than one person can safely use this app.</div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">More banks (beyond Chase)</div>
+      <div class="resource-card-desc">More institutions as Plaid access expands.</div>
+    </div>
+  </section>
+
+  </div>
 
   <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
   <script src="config.js"></script>

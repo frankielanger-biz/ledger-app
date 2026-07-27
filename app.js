@@ -50,6 +50,20 @@ const manualCategoryEl = document.getElementById("manual-category");
 const manualSubmitBtnEl = document.getElementById("manual-submit-btn");
 const manualAddStatusEl = document.getElementById("manual-add-status");
 const ledgerBrandEl = document.querySelector(".topnav-brand");
+const discreteToggleBtnEl = document.getElementById("discrete-toggle-btn");
+const forecastPlanBtnEl = document.getElementById("forecast-plan-btn");
+const scenarioSelectEl = document.getElementById("scenario-select");
+const bookCallTopicEl = document.getElementById("book-call-topic");
+const bookCallBtnEl = document.getElementById("book-call-btn");
+const faqQuestionInputEl = document.getElementById("faq-question-input");
+const faqQuestionSubmitEl = document.getElementById("faq-question-submit");
+const settingsNameEl = document.getElementById("settings-name");
+const settingsEmailEl = document.getElementById("settings-email");
+const settingsSaveBtnEl = document.getElementById("settings-save-btn");
+const settingsSaveStatusEl = document.getElementById("settings-save-status");
+const swipeContainerEl = document.getElementById("swipe-container");
+
+const BOOKING_EMAIL = "frankielanger@gmail.com";
 
 let latestBalances = null;
 let latestTransactions = null;
@@ -72,6 +86,7 @@ tabButtons.forEach((btn) => {
     const target = btn.dataset.tab;
     tabButtons.forEach((b) => b.classList.toggle("active", b === btn));
     tabPanels.forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== target));
+    btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   });
 });
 
@@ -79,6 +94,43 @@ ledgerBrandEl.addEventListener("click", () => {
   const dashboardBtn = document.querySelector('.topnav-tab[data-tab="dashboard"]');
   dashboardBtn.click();
 });
+
+// ---------------------------------------------------------------
+// Swipe left/right to move between tabs, in nav order
+// ---------------------------------------------------------------
+
+let swipeStartX = null;
+let swipeStartY = null;
+
+swipeContainerEl.addEventListener(
+  "touchstart",
+  (e) => {
+    swipeStartX = e.touches[0].clientX;
+    swipeStartY = e.touches[0].clientY;
+  },
+  { passive: true }
+);
+
+swipeContainerEl.addEventListener(
+  "touchend",
+  (e) => {
+    if (swipeStartX === null) return;
+    const deltaX = e.changedTouches[0].clientX - swipeStartX;
+    const deltaY = e.changedTouches[0].clientY - swipeStartY;
+
+    // Require a clearly horizontal swipe so vertical scrolling isn't hijacked.
+    if (Math.abs(deltaX) > 60 && Math.abs(deltaX) > Math.abs(deltaY) * 2) {
+      const buttons = Array.from(tabButtons);
+      const currentIdx = buttons.findIndex((b) => b.classList.contains("active"));
+      const nextIdx = deltaX < 0 ? currentIdx + 1 : currentIdx - 1;
+      if (nextIdx >= 0 && nextIdx < buttons.length) buttons[nextIdx].click();
+    }
+
+    swipeStartX = null;
+    swipeStartY = null;
+  },
+  { passive: true }
+);
 
 // ---------------------------------------------------------------
 // FAQ accordion
@@ -211,14 +263,27 @@ async function loadEverything() {
   refreshBtn.classList.remove("spinning");
 }
 
-function renderBalances(data) {
-  netWorthValueEl.textContent = formatMoney(data.net_worth);
-  netWorthDeltaEl.textContent = formatDelta(data.change_today);
-  netWorthDeltaEl.className = "hero-delta " + (data.change_today >= 0 ? "positive" : "negative");
+let discreteMode = localStorage.getItem("ledger_discrete_mode") === "true";
 
-  liquidCashValueEl.textContent = formatMoney(data.liquid_cash);
-  totalAssetsValueEl.textContent = formatMoney(data.total_assets);
-  totalLiabilitiesValueEl.textContent = formatMoney(-Math.abs(data.total_liabilities));
+function renderBalances(data) {
+  if (discreteMode) {
+    netWorthValueEl.textContent = "••••••";
+    netWorthDeltaEl.textContent = "Discrete mode on";
+    netWorthDeltaEl.className = "hero-delta";
+
+    const total = data.total_assets || 1; // guard divide-by-zero
+    liquidCashValueEl.textContent = `${((data.liquid_cash / total) * 100).toFixed(0)}%`;
+    totalAssetsValueEl.textContent = "100%";
+    totalLiabilitiesValueEl.textContent = `-${((data.total_liabilities / total) * 100).toFixed(0)}%`;
+  } else {
+    netWorthValueEl.textContent = formatMoney(data.net_worth);
+    netWorthDeltaEl.textContent = formatDelta(data.change_today);
+    netWorthDeltaEl.className = "hero-delta " + (data.change_today >= 0 ? "positive" : "negative");
+
+    liquidCashValueEl.textContent = formatMoney(data.liquid_cash);
+    totalAssetsValueEl.textContent = formatMoney(data.total_assets);
+    totalLiabilitiesValueEl.textContent = formatMoney(-Math.abs(data.total_liabilities));
+  }
 
   accountsListEl.innerHTML = "";
   if (!data.accounts || data.accounts.length === 0) {
@@ -236,11 +301,19 @@ function renderBalances(data) {
         <span class="account-name">${acct.name}</span>
         <span class="account-institution">${acct.institution_name ?? ""}</span>
       </div>
-      <span class="account-balance ${displayBalance < 0 ? "negative" : ""}">${formatMoney(displayBalance)}</span>
+      <span class="account-balance ${displayBalance < 0 ? "negative" : ""}">${discreteMode ? "••••" : formatMoney(displayBalance)}</span>
     `;
     accountsListEl.appendChild(row);
   }
 }
+
+discreteToggleBtnEl.addEventListener("click", () => {
+  discreteMode = !discreteMode;
+  localStorage.setItem("ledger_discrete_mode", discreteMode);
+  discreteToggleBtnEl.classList.toggle("active", discreteMode);
+  if (latestBalances) renderBalances(latestBalances);
+});
+if (discreteMode) discreteToggleBtnEl.classList.add("active");
 
 refreshBtn.addEventListener("click", loadEverything);
 
@@ -714,15 +787,22 @@ goalInputEl.addEventListener("keydown", (e) => {
   if (e.key === "Enter") showGoalPlan(latestBalances);
 });
 
+forecastPlanBtnEl.addEventListener("click", () => showGoalPlan(latestBalances));
+
 function showGoalPlan(data) {
   const goal = parseFloat(goalInputEl.value);
-  if (isNaN(goal) || goal <= 0 || !data) return;
+  if (isNaN(goal) || goal <= 0 || !data) {
+    goalResultEl.textContent = "Enter a goal amount first.";
+    return;
+  }
 
   const remaining = goal - data.net_worth;
   if (remaining <= 0) {
     goalResultEl.textContent = "You've already hit this goal.";
     return;
   }
+
+  const scenarioPct = parseFloat(scenarioSelectEl.value) || 0;
 
   // Required monthly savings to hit the goal in 5 years, assuming a 7%/yr
   // return compounded monthly — the same annuity-payment math as a
@@ -732,23 +812,40 @@ function showGoalPlan(data) {
   const months = years * 12;
   const requiredMonthly = (remaining * monthlyRate) / (Math.pow(1 + monthlyRate, months) - 1);
 
-  const currentPaceLine = (() => {
-    const history = data.history ?? [];
-    if (history.length < 2) return "";
+  const history = data.history ?? [];
+  let currentPaceLine = "";
+  let scenarioLine = "";
+
+  if (history.length >= 2) {
     const first = history[0];
     const last = history[history.length - 1];
     const daysElapsed = (new Date(last.created_at) - new Date(first.created_at)) / (1000 * 60 * 60 * 24);
-    const growthPerDay = daysElapsed > 0 ? (last.net_worth - first.net_worth) / daysElapsed : 0;
-    if (growthPerDay <= 0) return "At your current trend, growth has been flat or negative.";
-    const yearsToGoal = remaining / growthPerDay / 365;
-    return `At your current pace: ~${yearsToGoal.toFixed(1)} years.`;
-  })();
+    const baseGrowthPerDay = daysElapsed > 0 ? (last.net_worth - first.net_worth) / daysElapsed : 0;
+
+    if (baseGrowthPerDay <= 0 && scenarioPct === 0) {
+      currentPaceLine = "At your current trend, growth has been flat or negative.";
+    } else {
+      const yearsToGoal = remaining / baseGrowthPerDay / 365;
+      currentPaceLine = baseGrowthPerDay > 0 ? `At your current pace: ~${yearsToGoal.toFixed(1)} years.` : "At your current trend, growth has been flat or negative.";
+    }
+
+    if (scenarioPct > 0 && latestTransactions?.discretionary_spend_30d) {
+      const extraMonthly = latestTransactions.discretionary_spend_30d * (scenarioPct / 100);
+      const extraDaily = extraMonthly / 30;
+      const adjustedGrowthPerDay = baseGrowthPerDay + extraDaily;
+      if (adjustedGrowthPerDay > 0) {
+        const adjustedYears = remaining / adjustedGrowthPerDay / 365;
+        scenarioLine = `<p>Cutting discretionary spending ${scenarioPct}%: ~${adjustedYears.toFixed(1)} years (adds ~${formatMoney(extraMonthly)}/month).</p>`;
+      }
+    }
+  }
 
   goalResultEl.innerHTML = `
     <p><strong>Here's your plan:</strong></p>
     <p>${currentPaceLine}</p>
+    ${scenarioLine}
     <p>To hit this in 5 years at a 7%/yr estimate: save ~${formatMoney(requiredMonthly)}/month.</p>
-  `;
+    <p class="beta-disclaimer">Forecast is in beta — a planning estimate, not a guarantee.</p>  `;
 }
 
 // ---------------------------------------------------------------
@@ -967,5 +1064,46 @@ if ("serviceWorker" in navigator) {
     });
   });
 }
+
+// ---------------------------------------------------------------
+// Book a call — placeholder Calendly link; falls back to email with the
+// chosen topic until the real Calendly link is wired in.
+// ---------------------------------------------------------------
+
+bookCallBtnEl.addEventListener("click", (e) => {
+  if (bookCallBtnEl.getAttribute("href") === "#") {
+    e.preventDefault();
+    const topic = bookCallTopicEl.value || "General";
+    const subject = encodeURIComponent(`Ledger call — ${topic}`);
+    window.location.href = `mailto:${BOOKING_EMAIL}?subject=${subject}`;
+  }
+});
+
+// ---------------------------------------------------------------
+// FAQ — submit a question not covered above
+// ---------------------------------------------------------------
+
+faqQuestionSubmitEl.addEventListener("click", () => {
+  const question = faqQuestionInputEl.value.trim();
+  if (!question) return;
+  const subject = encodeURIComponent("Ledger question");
+  const body = encodeURIComponent(question);
+  window.location.href = `mailto:${BOOKING_EMAIL}?subject=${subject}&body=${body}`;
+  faqQuestionInputEl.value = "";
+});
+
+// ---------------------------------------------------------------
+// Settings — name/email saved locally, prefills the book-a-call flow
+// ---------------------------------------------------------------
+
+settingsNameEl.value = localStorage.getItem("ledger_settings_name") ?? "";
+settingsEmailEl.value = localStorage.getItem("ledger_settings_email") ?? "";
+
+settingsSaveBtnEl.addEventListener("click", () => {
+  localStorage.setItem("ledger_settings_name", settingsNameEl.value.trim());
+  localStorage.setItem("ledger_settings_email", settingsEmailEl.value.trim());
+  settingsSaveStatusEl.textContent = "Saved.";
+  setTimeout(() => (settingsSaveStatusEl.textContent = ""), 2000);
+});
 
 loadEverything();
