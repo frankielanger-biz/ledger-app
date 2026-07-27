@@ -12,7 +12,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 
 <link rel="stylesheet" href="style.css" />
 </head>
@@ -22,13 +22,15 @@
     <button class="topnav-brand">Ledger</button>
     <div class="topnav-tabs">
       <button class="topnav-tab active" data-tab="dashboard">Dashboard</button>
+      <button class="topnav-tab" data-tab="manage">Manage</button>
+      <button class="topnav-tab" data-tab="forecast">Forecast</button>
       <button class="topnav-tab" data-tab="faq">FAQ</button>
       <button class="topnav-tab" data-tab="resources">Resources</button>
       <button class="topnav-tab" data-tab="book-call">Book a call</button>
     </div>
   </nav>
 
-  <!-- ===================== DASHBOARD TAB ===================== -->
+  <!-- ===================== DASHBOARD TAB — glance only, stops after trend ===================== -->
   <main id="dashboard-screen" class="screen tab-panel" data-panel="dashboard">
 
     <header class="topbar">
@@ -99,25 +101,24 @@
         <div id="trend-tooltip" class="trend-tooltip"></div>
       </div>
       <div id="trend-axis-labels" class="trend-axis-labels"></div>
+      <button id="forecast-btn" class="forecast-btn">Forecast this →</button>
     </section>
 
-    <section class="check-block">
-      <div class="check-label">Can I afford it?</div>
-      <div class="check-input-row">
-        <span class="dollar-sign">$</span>
-        <input type="number" id="afford-input" inputmode="decimal" placeholder="0" />
-      </div>
-      <select id="afford-category" class="afford-category-select">
-        <option value="">What kind of spend is this?</option>
-        <option value="housing">Housing</option>
-        <option value="utilities">Utilities</option>
-        <option value="subscription">Subscription</option>
-        <option value="discretionary">General discretionary</option>
-        <option value="need">General need</option>
-        <option value="investment">Investment</option>
-        <option value="other">Other</option>
-      </select>
-      <div id="afford-result" class="afford-result"></div>
+    <p id="dashboard-status" class="dashboard-status"></p>
+
+  </main>
+
+  <!-- ===================== MANAGE TAB ===================== -->
+  <section class="screen tab-panel hidden" data-panel="manage">
+
+    <div class="page-header">
+      <div class="page-title">Manage</div>
+    </div>
+
+    <section class="accounts">
+      <div class="section-label">Accounts</div>
+      <div id="accounts-list" class="accounts-list"></div>
+      <button id="connect-btn" class="connect-btn">+ Connect a bank</button>
     </section>
 
     <section class="allocation-section">
@@ -139,56 +140,89 @@
       </div>
     </section>
 
+    <section class="check-block">
+      <div class="check-label">Can I afford it?</div>
+      <div class="check-input-row">
+        <span class="dollar-sign">$</span>
+        <input type="number" id="afford-input" inputmode="decimal" placeholder="0" />
+      </div>
+      <select id="afford-category" class="afford-category-select">
+        <option value="">What kind of spend is this?</option>
+        <option value="housing">Housing</option>
+        <option value="utilities">Utilities</option>
+        <option value="subscription">Subscription</option>
+        <option value="discretionary">General discretionary</option>
+        <option value="need">General need</option>
+        <option value="investment">Investment</option>
+        <option value="other">Other</option>
+      </select>
+      <div id="afford-result" class="afford-result"></div>
+    </section>
+
+    <section class="invest-section">
+      <div class="section-label">What if I invested this instead?</div>
+
+      <label class="checkbox-row">
+        <input type="checkbox" id="no-brokerage-check" />
+        <span>I don't have a brokerage account</span>
+      </label>
+
+      <div id="no-brokerage-panel" class="no-brokerage-panel hidden">
+        <p>
+          A brokerage account is where you actually buy stocks/funds — it's separate from your bank.
+          Fidelity, Schwab, and Robinhood are common, free starting points, usually open in a few
+          minutes online.
+        </p>
+      </div>
+
+      <div id="invest-inputs-wrap">
+        <div class="check-input-row">
+          <input type="text" id="invest-ticker" placeholder="Ticker — SPY, QQQ, AAPL…" autocapitalize="characters" />
+        </div>
+        <div id="invest-ticker-quote" class="ticker-result"></div>
+
+        <div class="invest-inputs">
+          <div class="check-input-row">
+            <span class="dollar-sign">$</span>
+            <input type="number" id="invest-amount" inputmode="decimal" placeholder="Amount" />
+          </div>
+          <div class="check-input-row invest-years-row">
+            <input type="number" id="invest-years" inputmode="decimal" placeholder="Years" />
+            <span class="years-suffix">yrs</span>
+          </div>
+        </div>
+        <div class="check-input-row invest-cadence-row">
+          <select id="invest-cadence">
+            <option value="once">One-time</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+          </select>
+        </div>
+        <div id="invest-result" class="invest-result"></div>
+      </div>
+    </section>
+
+  </section>
+
+  <!-- ===================== FORECAST TAB ===================== -->
+  <section class="screen tab-panel hidden" data-panel="forecast">
+
+    <div class="page-header">
+      <div class="page-title">Forecast</div>
+    </div>
+
     <section class="goal-section">
       <div class="section-label">Goal net worth</div>
       <div class="check-input-row">
         <span class="dollar-sign">$</span>
         <input type="number" id="goal-input" inputmode="decimal" placeholder="e.g. 1000000" />
       </div>
+      <div class="forecast-hint">Press Enter for a full plan</div>
       <div id="goal-result" class="goal-result"></div>
     </section>
 
-    <section class="invest-section">
-      <div class="section-label">What if I invested this instead?</div>
-      <div class="invest-inputs">
-        <div class="check-input-row">
-          <span class="dollar-sign">$</span>
-          <input type="number" id="invest-amount" inputmode="decimal" placeholder="Amount" />
-        </div>
-        <div class="check-input-row invest-years-row">
-          <input type="number" id="invest-years" inputmode="decimal" placeholder="Years" />
-          <span class="years-suffix">yrs</span>
-        </div>
-      </div>
-      <div class="check-input-row invest-cadence-row">
-        <select id="invest-cadence">
-          <option value="once">One-time</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-          <option value="yearly">Yearly</option>
-        </select>
-      </div>
-      <div id="invest-result" class="invest-result"></div>
-    </section>
-
-    <section class="ticker-section">
-      <div class="section-label">Check a stock price</div>
-      <div class="check-input-row">
-        <input type="text" id="ticker-input" placeholder="SPY, QQQ, AAPL…" autocapitalize="characters" />
-        <button id="ticker-lookup-btn" class="ticker-lookup-btn">Look up</button>
-      </div>
-      <div id="ticker-result" class="ticker-result"></div>
-    </section>
-
-    <section class="accounts">
-      <div class="section-label">Accounts</div>
-      <div id="accounts-list" class="accounts-list"></div>
-      <button id="connect-btn" class="connect-btn">+ Connect a bank</button>
-    </section>
-
-    <p id="dashboard-status" class="dashboard-status"></p>
-
-  </main>
+  </section>
 
   <!-- ===================== FAQ TAB ===================== -->
   <section class="page-panel tab-panel hidden" data-panel="faq">

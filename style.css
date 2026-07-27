@@ -15,8 +15,8 @@
   --accent: #00D9A3;
   --accent-dim: #0A3D30;
 
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-  --font-sans: "IBM Plex Sans", -apple-system, sans-serif;
+  --font-mono: "Space Grotesk", ui-monospace, monospace;
+  --font-sans: "Inter", -apple-system, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -55,7 +55,7 @@ html, body {
   border: none;
   cursor: pointer;
   padding: 0;
-  align-self: flex-start;
+  align-self: center;
 }
 
 .topnav-tabs {
@@ -141,7 +141,7 @@ select:focus-visible {
 /* ---------------- Hero (net worth) — centered ---------------- */
 
 .hero {
-  padding: 12px 0 20px;
+  padding: 4px 0 20px;
   border-bottom: 1px solid var(--hairline);
   text-align: center;
 }
@@ -778,6 +778,77 @@ select:focus-visible {
   max-width: 480px;
   margin: 0 auto;
   padding: 24px 20px 40px;
+}
+
+.page-header {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 20px 0;
+}
+
+.page-header .page-title {
+  margin-bottom: 4px;
+}
+
+.tab-panel.screen {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 20px 40px;
+}
+
+.forecast-btn {
+  display: block;
+  margin: 14px auto 0;
+  background: none;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+}
+
+.forecast-btn:hover {
+  background: var(--accent-dim);
+}
+
+.forecast-hint {
+  font-size: 12px;
+  color: var(--ink-dim);
+  margin-top: 8px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.no-brokerage-panel {
+  background: var(--bg-raised);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 14px;
+  margin: 10px 0;
+  text-align: left;
+}
+
+.no-brokerage-panel p {
+  font-size: 13px;
+  color: var(--ink-dim);
+  line-height: 1.6;
+  margin: 0;
 }
 
 .page-title {

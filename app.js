@@ -35,9 +35,12 @@ const investAmountEl = document.getElementById("invest-amount");
 const investYearsEl = document.getElementById("invest-years");
 const investCadenceEl = document.getElementById("invest-cadence");
 const investResultEl = document.getElementById("invest-result");
-const tickerInputEl = document.getElementById("ticker-input");
-const tickerLookupBtnEl = document.getElementById("ticker-lookup-btn");
-const tickerResultEl = document.getElementById("ticker-result");
+const investTickerEl = document.getElementById("invest-ticker");
+const investTickerQuoteEl = document.getElementById("invest-ticker-quote");
+const noBrokerageCheckEl = document.getElementById("no-brokerage-check");
+const noBrokeragePanelEl = document.getElementById("no-brokerage-panel");
+const investInputsWrapEl = document.getElementById("invest-inputs-wrap");
+const forecastBtnEl = document.getElementById("forecast-btn");
 const allocationListEl = document.getElementById("allocation-list");
 const addManualBtnEl = document.getElementById("add-manual-btn");
 const addManualFormEl = document.getElementById("add-manual-form");
@@ -749,8 +752,50 @@ function showGoalPlan(data) {
 }
 
 // ---------------------------------------------------------------
-// "Invest instead" comparison — simple 7%/yr nominal estimate
+// "Invest instead" comparison — grounded in a real ticker's current price.
+//
+// Honest scope: we show today's real price and how many shares your amount
+// buys. The forward projection still uses a flat 7%/yr estimate — that part
+// is NOT ticker-specific historical performance (StockData.org's free tier
+// doesn't give us that), it's the same generic estimate as before, just
+// now anchored to a real share count instead of a bare dollar figure.
 // ---------------------------------------------------------------
+
+let latestTickerQuote = null;
+
+async function lookupInvestTicker() {
+  const ticker = investTickerEl.value.trim();
+  if (!ticker) {
+    latestTickerQuote = null;
+    investTickerQuoteEl.textContent = "";
+    updateInvestResult();
+    return;
+  }
+
+  investTickerQuoteEl.textContent = "Looking up…";
+
+  try {
+    const quote = await callFunction("get-stock-quote", { ticker });
+    latestTickerQuote = quote;
+    const changeClass = quote.day_change >= 0 ? "positive" : "negative";
+    const changeArrow = quote.day_change >= 0 ? "▲" : "▼";
+
+    investTickerQuoteEl.innerHTML = `
+      <div class="ticker-price">${quote.ticker} · $${quote.price.toFixed(2)}</div>
+      <div class="ticker-change ${changeClass}">${changeArrow} ${Math.abs(quote.day_change).toFixed(2)}% today</div>
+    `;
+  } catch (err) {
+    latestTickerQuote = null;
+    investTickerQuoteEl.textContent = `Couldn't look that up: ${err.message}`;
+  }
+
+  updateInvestResult();
+}
+
+investTickerEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") lookupInvestTicker();
+});
+investTickerEl.addEventListener("blur", lookupInvestTicker);
 
 function updateInvestResult() {
   const amount = parseFloat(investAmountEl.value);
@@ -763,19 +808,21 @@ function updateInvestResult() {
   }
 
   const annualReturn = 0.07;
+  const tickerLine = latestTickerQuote
+    ? `<p>At $${latestTickerQuote.price.toFixed(2)}/share, that's about ${(amount / latestTickerQuote.price).toFixed(2)} shares of ${latestTickerQuote.ticker} today.</p>`
+    : "";
 
   if (cadence === "once") {
     const futureValue = amount * Math.pow(1 + annualReturn, years);
     const gain = futureValue - amount;
     investResultEl.innerHTML = `
+      ${tickerLine}
       <p>At a 7%/yr estimate: ${formatMoney(futureValue)} in ${years} year${years == 1 ? "" : "s"}</p>
-      <p>(${formatMoney(gain)} of growth — this is a rough estimate, not a guarantee)</p>
+      <p>(${formatMoney(gain)} of growth — a rough market-average estimate, not ${latestTickerQuote ? latestTickerQuote.ticker + "-specific" : "a guarantee"})</p>
     `;
     return;
   }
 
-  // Recurring contribution — future value of an annuity, compounded at the
-  // same cadence as the contribution (weekly/monthly/yearly).
   const periodsPerYear = { weekly: 52, monthly: 12, yearly: 1 }[cadence];
   const periodRate = Math.pow(1 + annualReturn, 1 / periodsPerYear) - 1;
   const totalPeriods = years * periodsPerYear;
@@ -784,6 +831,7 @@ function updateInvestResult() {
   const gain = futureValue - totalContributed;
 
   investResultEl.innerHTML = `
+    ${tickerLine}
     <p>${formatMoney(amount)}/${cadence.replace("ly", "")} at 7%/yr: ${formatMoney(futureValue)} in ${years} year${years == 1 ? "" : "s"}</p>
     <p>(${formatMoney(totalContributed)} contributed · ${formatMoney(gain)} of growth — a rough estimate, not a guarantee)</p>
   `;
@@ -793,37 +841,19 @@ investAmountEl.addEventListener("input", updateInvestResult);
 investYearsEl.addEventListener("input", updateInvestResult);
 investCadenceEl.addEventListener("change", updateInvestResult);
 
+// "I don't have a brokerage account" — hides the calculator, shows guidance.
+noBrokerageCheckEl.addEventListener("change", () => {
+  const checked = noBrokerageCheckEl.checked;
+  noBrokeragePanelEl.classList.toggle("hidden", !checked);
+  investInputsWrapEl.classList.toggle("hidden", checked);
+});
+
 // ---------------------------------------------------------------
-// Stock ticker lookup — SPY, QQQ, DIA (Dow), or any individual ticker
+// Forecast button — jumps from the trend graph straight to the Forecast tab
 // ---------------------------------------------------------------
 
-async function lookupTicker() {
-  const ticker = tickerInputEl.value.trim();
-  if (!ticker) return;
-
-  tickerLookupBtnEl.disabled = true;
-  tickerResultEl.textContent = "Looking up…";
-
-  try {
-    const quote = await callFunction("get-stock-quote", { ticker });
-    const changeClass = quote.day_change >= 0 ? "positive" : "negative";
-    const changeArrow = quote.day_change >= 0 ? "▲" : "▼";
-
-    tickerResultEl.innerHTML = `
-      <div class="ticker-price">${quote.ticker} · $${quote.price.toFixed(2)}</div>
-      <div class="ticker-change ${changeClass}">${changeArrow} ${Math.abs(quote.day_change).toFixed(2)}% today</div>
-      <div>${quote.name ?? ""}</div>
-    `;
-  } catch (err) {
-    tickerResultEl.textContent = `Couldn't look that up: ${err.message}`;
-  } finally {
-    tickerLookupBtnEl.disabled = false;
-  }
-}
-
-tickerLookupBtnEl.addEventListener("click", lookupTicker);
-tickerInputEl.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") lookupTicker();
+forecastBtnEl.addEventListener("click", () => {
+  document.querySelector('.topnav-tab[data-tab="forecast"]').click();
 });
 
 // ---------------------------------------------------------------
