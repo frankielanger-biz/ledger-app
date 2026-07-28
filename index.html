@@ -18,6 +18,26 @@
 </head>
 <body>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="config.js"></script>
+
+  <!-- ===================== AUTH SCREEN ===================== -->
+  <section id="auth-screen" class="auth-screen">
+    <div class="auth-card">
+      <div class="topnav-brand auth-brand">Ledger</div>
+      <h1 id="auth-title">Welcome back</h1>
+      <form id="auth-form">
+        <input type="email" id="auth-email" placeholder="you@email.com" required autocomplete="email" />
+        <input type="password" id="auth-password" placeholder="Password" required autocomplete="current-password" minlength="6" />
+        <button type="submit" id="auth-submit-btn">Sign in</button>
+      </form>
+      <p id="auth-status" class="auth-status"></p>
+      <button id="auth-toggle-btn" class="auth-toggle-btn">Don't have an account? Sign up</button>
+    </div>
+  </section>
+
+  <div id="app-root" class="hidden">
+
   <nav class="topnav">
     <button class="topnav-brand">Ledger</button>
     <div class="topnav-tabs">
@@ -595,6 +615,10 @@
     <div class="settings-section-label">Invite friends</div>
     <button id="invite-friends-btn" class="connect-btn">Share Ledger</button>
     <div id="invite-status" class="dashboard-status"></div>
+
+    <div class="settings-divider"></div>
+
+    <button id="sign-out-btn" class="sign-out-btn">Sign out</button>
   </section>
 
   <!-- ===================== IN PROGRESS TAB ===================== -->
@@ -628,12 +652,18 @@
       <div class="resource-card-title">Loose budget builder</div>
       <div class="resource-card-desc">Ledger isn't a budgeting app, but a light, optional budget view is coming for people who want one.</div>
     </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">Trading education</div>
+      <div class="resource-card-desc">For people who want to learn to trade, not just track. Options, technical analysis basics, risk management, the real stuff, not hype.</div>
+    </div>
   </section>
 
   </div>
 
+  </div>
+
   <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

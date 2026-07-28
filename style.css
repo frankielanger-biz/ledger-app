@@ -168,6 +168,93 @@ select:focus-visible {
   border-color: var(--accent);
 }
 
+/* ---------------- Auth screen ---------------- */
+
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+}
+
+.auth-brand {
+  font-size: 22px;
+  margin-bottom: 24px;
+  display: block;
+}
+
+.auth-card h1 {
+  font-size: 21px;
+  font-weight: 700;
+  margin: 0 0 20px;
+}
+
+#auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#auth-form input {
+  background: var(--bg-raised);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 13px 14px;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  width: 100%;
+}
+
+#auth-form button[type="submit"] {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 8px;
+  padding: 13px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+.auth-status {
+  font-size: 13px;
+  color: var(--negative);
+  min-height: 18px;
+  margin: 12px 0 0;
+}
+
+.auth-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--ink-dim);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  margin-top: 16px;
+  text-decoration: underline;
+}
+
+.sign-out-btn {
+  width: 100%;
+  background: none;
+  border: 1px solid var(--negative);
+  color: var(--negative);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+}
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }

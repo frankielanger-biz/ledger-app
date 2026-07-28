@@ -1,7 +1,22 @@
-// app.js — no login. Every request just includes the shared APP_SECRET
-// as a header, which the edge functions check before doing anything.
+// app.js — real per-user login now. Every request sends the signed-in
+// user's own session token, and Row Level Security in the database
+// enforces that they only ever see their own data.
 
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const FN_BASE = `${SUPABASE_URL}/functions/v1`;
+
+const authScreenEl = document.getElementById("auth-screen");
+const appRootEl = document.getElementById("app-root");
+const authFormEl = document.getElementById("auth-form");
+const authEmailEl = document.getElementById("auth-email");
+const authPasswordEl = document.getElementById("auth-password");
+const authSubmitBtnEl = document.getElementById("auth-submit-btn");
+const authStatusEl = document.getElementById("auth-status");
+const authToggleBtnEl = document.getElementById("auth-toggle-btn");
+const authTitleEl = document.getElementById("auth-title");
+
+let authMode = "signin"; // or "signup"
+let appHasBooted = false;
 
 const netWorthValueEl = document.getElementById("net-worth-value");
 const netWorthDeltaEl = document.getElementById("net-worth-delta");
@@ -241,11 +256,15 @@ function clamp(n, min, max) {
 // ---------------------------------------------------------------
 
 async function callFunction(name, body) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   const res = await fetch(`${FN_BASE}/${name}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-app-secret": APP_SECRET,
+      "Authorization": `Bearer ${session?.access_token ?? ""}`,
       "apikey": SUPABASE_ANON_KEY,
     },
     body: JSON.stringify(body ?? {}),
@@ -1692,4 +1711,75 @@ inviteFriendsBtnEl.addEventListener("click", async () => {
   }
 });
 
-loadEverything();
+const signOutBtnEl = document.getElementById("sign-out-btn");
+
+signOutBtnEl.addEventListener("click", async () => {
+  await supabase.auth.signOut();
+});
+
+// ---------------------------------------------------------------
+// Auth — real sign in / sign up, gates the whole app
+// ---------------------------------------------------------------
+
+authToggleBtnEl.addEventListener("click", () => {
+  authMode = authMode === "signin" ? "signup" : "signin";
+  authTitleEl.textContent = authMode === "signin" ? "Welcome back" : "Create your account";
+  authSubmitBtnEl.textContent = authMode === "signin" ? "Sign in" : "Sign up";
+  authToggleBtnEl.textContent =
+    authMode === "signin" ? "Don't have an account? Sign up" : "Already have an account? Sign in";
+  authStatusEl.textContent = "";
+});
+
+authFormEl.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  authSubmitBtnEl.disabled = true;
+  authStatusEl.textContent = authMode === "signin" ? "Signing in…" : "Creating your account…";
+
+  const email = authEmailEl.value.trim();
+  const password = authPasswordEl.value;
+
+  const { error } =
+    authMode === "signin"
+      ? await supabase.auth.signInWithPassword({ email, password })
+      : await supabase.auth.signUp({ email, password });
+
+  authSubmitBtnEl.disabled = false;
+
+  if (error) {
+    authStatusEl.textContent = error.message;
+    return;
+  }
+
+  authStatusEl.textContent = "";
+  // onAuthStateChange below handles showing the app once the session lands.
+});
+
+function showAuthScreen() {
+  authScreenEl.classList.remove("hidden");
+  appRootEl.classList.add("hidden");
+}
+
+function showApp() {
+  authScreenEl.classList.add("hidden");
+  appRootEl.classList.remove("hidden");
+  if (!appHasBooted) {
+    appHasBooted = true;
+    loadEverything();
+  }
+}
+
+supabase.auth.onAuthStateChange((_event, session) => {
+  if (session) {
+    showApp();
+  } else {
+    appHasBooted = false;
+    showAuthScreen();
+  }
+});
+
+// Initial check on page load, in case a session is already stored from a
+// previous visit.
+supabase.auth.getSession().then(({ data: { session } }) => {
+  if (session) showApp();
+  else showAuthScreen();
+});
