@@ -26,6 +26,7 @@ const scoreFlipBtnFrontEl = document.getElementById("score-flip-btn-front");
 const scoreFlipBtnBackEl = document.getElementById("score-flip-btn-back");
 const spendingPieCanvasEl = document.getElementById("spending-pie-canvas");
 const spendingLegendEl = document.getElementById("spending-legend");
+const spendingMonthSelectEl = document.getElementById("spending-month-select");
 const trendCanvasEl = document.getElementById("trend-canvas");
 const trendTooltipEl = document.getElementById("trend-tooltip");
 const trendAxisLabelsEl = document.getElementById("trend-axis-labels");
@@ -41,6 +42,7 @@ const investCadenceEl = document.getElementById("invest-cadence");
 const investResultEl = document.getElementById("invest-result");
 const investTickerEl = document.getElementById("invest-ticker");
 const investTickerQuoteEl = document.getElementById("invest-ticker-quote");
+const compareSpyCheckEl = document.getElementById("compare-spy-check");
 const noBrokerageCheckEl = document.getElementById("no-brokerage-check");
 const noBrokeragePanelEl = document.getElementById("no-brokerage-panel");
 const investInputsWrapEl = document.getElementById("invest-inputs-wrap");
@@ -54,7 +56,25 @@ const manualCategoryEl = document.getElementById("manual-category");
 const manualSubmitBtnEl = document.getElementById("manual-submit-btn");
 const manualAddStatusEl = document.getElementById("manual-add-status");
 const ledgerBrandEl = document.querySelector(".topnav-brand");
+
+// New feature elements
+const percentileLineEl = document.getElementById("percentile-line");
+const emergencyFundBarEl = document.getElementById("emergency-fund-bar");
+const emergencyFundCaptionEl = document.getElementById("emergency-fund-caption");
+const milestoneBarEl = document.getElementById("milestone-bar");
+const milestoneCaptionEl = document.getElementById("milestone-caption");
+const subscriptionListEl = document.getElementById("subscription-list");
+const debtPayoffListEl = document.getElementById("debt-payoff-list");
+const debtPayoffSummaryEl = document.getElementById("debt-payoff-summary");
+const watchlistListEl = document.getElementById("watchlist-list");
+const addWatchlistBtnEl = document.getElementById("add-watchlist-btn");
+const addWatchlistFormEl = document.getElementById("add-watchlist-form");
+const watchlistLabelEl = document.getElementById("watchlist-label");
+const watchlistAmountEl = document.getElementById("watchlist-amount");
+const watchlistSubmitBtnEl = document.getElementById("watchlist-submit-btn");
 const discreteToggleBtnEl = document.getElementById("discrete-toggle-btn");
+const eyeOpenIconEl = document.getElementById("eye-open-icon");
+const eyeClosedIconEl = document.getElementById("eye-closed-icon");
 const forecastPlanBtnEl = document.getElementById("forecast-plan-btn");
 const scenarioSelectEl = document.getElementById("scenario-select");
 const bookCallTopicEl = document.getElementById("book-call-topic");
@@ -62,6 +82,9 @@ const bookCallBtnEl = document.getElementById("book-call-btn");
 const faqQuestionInputEl = document.getElementById("faq-question-input");
 const faqQuestionSubmitEl = document.getElementById("faq-question-submit");
 const faqQuestionStatusEl = document.getElementById("faq-question-status");
+const amaQuestionInputEl = document.getElementById("ama-question-input");
+const amaQuestionSubmitEl = document.getElementById("ama-question-submit");
+const amaQuestionStatusEl = document.getElementById("ama-question-status");
 const settingsFirstNameEl = document.getElementById("settings-first-name");
 const settingsLastNameEl = document.getElementById("settings-last-name");
 const settingsEmailEl = document.getElementById("settings-email");
@@ -291,6 +314,8 @@ async function loadEverything() {
     renderAllocation(balances);
     renderGoal(balances);
     renderSettingsAccounts(balances);
+    renderPercentile(balances);
+    renderMilestone(balances);
   } catch (err) {
     topbarStatusEl.textContent = "";
     dashboardStatus.textContent = `Couldn't load balances: ${err.message}`;
@@ -307,8 +332,11 @@ async function loadEverything() {
     latestTransactions = null;
   }
 
+  renderEmergencyFund(latestBalances);
+  loadSubscriptionAudit();
+  loadDebtPayoff();
   renderScore();
-  if (scoreFlipInnerEl.classList.contains("flipped")) renderSpendingBreakdown();
+  if (scoreFlipInnerEl.classList.contains("flipped")) loadSpendingForMonth();
   syncFlipHeight();
   topbarStatusEl.textContent = "";
   dashboardStatus.textContent = "";
@@ -363,12 +391,14 @@ discreteToggleBtnEl.addEventListener("click", () => {
   discreteMode = !discreteMode;
   localStorage.setItem("ledger_discrete_mode", discreteMode);
   discreteToggleBtnEl.classList.toggle("active", discreteMode);
-  discreteToggleBtnEl.textContent = discreteMode ? "🙈" : "👁";
+  eyeOpenIconEl.classList.toggle("hidden", discreteMode);
+  eyeClosedIconEl.classList.toggle("hidden", !discreteMode);
   if (latestBalances) renderBalances(latestBalances);
 });
 if (discreteMode) {
   discreteToggleBtnEl.classList.add("active");
-  discreteToggleBtnEl.textContent = "🙈";
+  eyeOpenIconEl.classList.add("hidden");
+  eyeClosedIconEl.classList.remove("hidden");
 }
 
 refreshBtn.addEventListener("click", loadEverything);
@@ -591,7 +621,7 @@ scoreGaugeWrapEl.addEventListener("click", () => {
 scoreFlipBtnFrontEl.addEventListener("click", (e) => {
   e.stopPropagation();
   scoreFlipInnerEl.classList.add("flipped");
-  renderSpendingBreakdown();
+  loadSpendingForMonth();
   syncFlipHeight();
 });
 
@@ -604,27 +634,55 @@ scoreFlipBtnBackEl.addEventListener("click", (e) => {
 // ---------------------------------------------------------------
 // Spending breakdown — pie chart on the back of the flip card
 //
-// Honest limitation: Plaid gives us 30 days of transactions, which
-// get-transactions aggregates into 30-day category totals. "Week" below
-// divides those by ~4.3 to approximate a weekly average. "Day" would need
-// real daily-level data we don't have yet — labeled clearly as such rather
-// than faking a number.
+// Uses a real calendar-month date range fetched fresh from Plaid for
+// whichever month is selected, rather than dividing 30-day totals into
+// fake daily/weekly numbers.
 // ---------------------------------------------------------------
 
 const CATEGORY_COLORS = [
   "#00D9A3", "#4FA8D9", "#D9A24F", "#B56AD9", "#D95F5F", "#6AD98F", "#D9C24F", "#7C948A",
 ];
 
-let spendingPeriod = "week";
+let monthlySpendingData = null;
 
-document.querySelectorAll(".spending-period-btn").forEach((btn) => {
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    spendingPeriod = btn.dataset.period;
-    document.querySelectorAll(".spending-period-btn").forEach((b) => b.classList.toggle("active", b === btn));
-    renderSpendingBreakdown();
-    syncFlipHeight();
-  });
+function monthDateRange(monthsAgo) {
+  const now = new Date();
+  const targetMonth = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1);
+  const start = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), 1);
+  const end =
+    monthsAgo === 0
+      ? now // "this month, so far" stops today
+      : new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0); // last day of that month
+
+  // Format using local date parts, not toISOString (which converts to UTC
+  // and can shift the calendar day depending on the user's timezone).
+  const fmt = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+  return { start_date: fmt(start), end_date: fmt(end) };
+}
+
+async function loadSpendingForMonth() {
+  const monthsAgo = parseInt(spendingMonthSelectEl.value, 10);
+  const { start_date, end_date } = monthDateRange(monthsAgo);
+
+  spendingLegendEl.innerHTML = `<div class="empty-state">Loading…</div>`;
+  try {
+    monthlySpendingData = await callFunction("get-transactions", { start_date, end_date });
+  } catch (err) {
+    monthlySpendingData = null;
+    console.warn("Couldn't load monthly spending:", err.message);
+  }
+  renderSpendingBreakdown();
+  syncFlipHeight();
+}
+
+spendingMonthSelectEl.addEventListener("change", (e) => {
+  e.stopPropagation();
+  loadSpendingForMonth();
 });
 
 function renderSpendingBreakdown() {
@@ -633,36 +691,23 @@ function renderSpendingBreakdown() {
   const height = spendingPieCanvasEl.height;
   ctx.clearRect(0, 0, width, height);
 
-  if (spendingPeriod === "day") {
-    ctx.font = "13px IBM Plex Sans, sans-serif";
-    ctx.fillStyle = "#7C948A";
-    ctx.textAlign = "center";
-    ctx.fillText("Day view coming soon.", width / 2, height / 2 - 8);
-    ctx.fillText("needs daily-level data.", width / 2, height / 2 + 10);
-    spendingLegendEl.innerHTML = "";
-    return;
-  }
-
-  const breakdown = latestTransactions?.category_breakdown_30d ?? [];
+  const breakdown = monthlySpendingData?.category_breakdown_30d ?? [];
   if (breakdown.length === 0) {
-    ctx.font = "13px IBM Plex Sans, sans-serif";
+    ctx.font = "13px Manrope, sans-serif";
     ctx.fillStyle = "#7C948A";
     ctx.textAlign = "center";
-    ctx.fillText("No spending data yet.", width / 2, height / 2);
+    ctx.fillText("No spending data for this month.", width / 2, height / 2);
     spendingLegendEl.innerHTML = "";
     return;
   }
 
-  // Divide 30-day totals down to a weekly average (~4.33 weeks/month).
-  const weeklyBreakdown = breakdown.map((b) => ({ category: b.category, total: b.total / 4.33 }));
-  const total = weeklyBreakdown.reduce((sum, b) => sum + b.total, 0);
-
+  const total = breakdown.reduce((sum, b) => sum + b.total, 0);
   const cx = width / 2;
   const cy = height / 2;
   const radius = 70;
   let startAngle = -Math.PI / 2;
 
-  weeklyBreakdown.forEach((b, i) => {
+  breakdown.forEach((b, i) => {
     const sliceAngle = (b.total / total) * 2 * Math.PI;
     ctx.beginPath();
     ctx.moveTo(cx, cy);
@@ -673,7 +718,7 @@ function renderSpendingBreakdown() {
     startAngle += sliceAngle;
   });
 
-  spendingLegendEl.innerHTML = weeklyBreakdown
+  spendingLegendEl.innerHTML = breakdown
     .map((b, i) => {
       const label = b.category.replaceAll("_", " ").toLowerCase();
       const color = CATEGORY_COLORS[i % CATEGORY_COLORS.length];
@@ -681,7 +726,7 @@ function renderSpendingBreakdown() {
         <div class="spending-legend-row">
           <span class="spending-legend-swatch" style="background:${color}"></span>
           <span>${label}</span>
-          <span class="mono">${formatMoney(b.total)}/wk</span>
+          <span class="mono">${formatMoney(b.total)}</span>
         </div>`;
     })
     .join("");
@@ -1025,13 +1070,14 @@ function renderSpendingGraph() {
 // "Invest instead" comparison — grounded in a real ticker's current price.
 //
 // Honest scope: we show today's real price and how many shares your amount
-// buys. The forward projection still uses a flat 7%/yr estimate — that part
-// is NOT ticker-specific historical performance (StockData.org's free tier
-// doesn't give us that), it's the same generic estimate as before, just
-// now anchored to a real share count instead of a bare dollar figure.
+// buys, for the chosen ticker and (if checked) SPY. The forward projection
+// uses the same flat 7%/yr market-average estimate for both — we don't have
+// ticker-specific historical return data, so we're not claiming one would
+// have outperformed the other, just showing today's entry point for each.
 // ---------------------------------------------------------------
 
 let latestTickerQuote = null;
+let latestSpyQuote = null;
 
 async function lookupInvestTicker() {
   const ticker = investTickerEl.value.trim();
@@ -1059,13 +1105,43 @@ async function lookupInvestTicker() {
     investTickerQuoteEl.textContent = `Couldn't look that up: ${err.message}`;
   }
 
+  await maybeLoadSpyQuote();
   updateInvestResult();
+}
+
+async function maybeLoadSpyQuote() {
+  if (!compareSpyCheckEl.checked) {
+    latestSpyQuote = null;
+    return;
+  }
+  try {
+    latestSpyQuote = await callFunction("get-stock-quote", { ticker: "SPY" });
+  } catch (err) {
+    latestSpyQuote = null;
+  }
 }
 
 investTickerEl.addEventListener("keydown", (e) => {
   if (e.key === "Enter") lookupInvestTicker();
 });
 investTickerEl.addEventListener("blur", lookupInvestTicker);
+
+compareSpyCheckEl.addEventListener("change", async () => {
+  await maybeLoadSpyQuote();
+  updateInvestResult();
+});
+
+function projectedValue(amount, years, cadence) {
+  const annualReturn = 0.07;
+  if (cadence === "once") {
+    return { futureValue: amount * Math.pow(1 + annualReturn, years), contributed: amount };
+  }
+  const periodsPerYear = { monthly: 12, yearly: 1 }[cadence];
+  const periodRate = Math.pow(1 + annualReturn, 1 / periodsPerYear) - 1;
+  const totalPeriods = years * periodsPerYear;
+  const futureValue = amount * ((Math.pow(1 + periodRate, totalPeriods) - 1) / periodRate);
+  return { futureValue, contributed: amount * totalPeriods };
+}
 
 function updateInvestResult() {
   const amount = parseFloat(investAmountEl.value);
@@ -1077,33 +1153,24 @@ function updateInvestResult() {
     return;
   }
 
-  const annualReturn = 0.07;
-  const tickerLine = latestTickerQuote
-    ? `<p>At $${latestTickerQuote.price.toFixed(2)}/share, that's about ${(amount / latestTickerQuote.price).toFixed(2)} shares of ${latestTickerQuote.ticker} today.</p>`
+  const { futureValue, contributed } = projectedValue(amount, years, cadence);
+  const cadenceLabel = cadence === "once" ? "one-time" : `/${cadence.replace("ly", "")}`;
+
+  let sharesLine = latestTickerQuote
+    ? `<p class="invest-shares-line">${(amount / latestTickerQuote.price).toFixed(2)} shares of ${latestTickerQuote.ticker} at $${latestTickerQuote.price.toFixed(2)} today</p>`
     : "";
 
-  if (cadence === "once") {
-    const futureValue = amount * Math.pow(1 + annualReturn, years);
-    const gain = futureValue - amount;
-    investResultEl.innerHTML = `
-      ${tickerLine}
-      <p>At a 7%/yr estimate: ${formatMoney(futureValue)} in ${years} year${years == 1 ? "" : "s"}</p>
-      <p>(${formatMoney(gain)} of growth, a rough market-average estimate, not ${latestTickerQuote ? latestTickerQuote.ticker + "-specific" : "a guarantee"})</p>
-    `;
-    return;
+  let spyLine = "";
+  if (compareSpyCheckEl.checked && latestSpyQuote) {
+    spyLine = `<p class="invest-shares-line">vs. ${(amount / latestSpyQuote.price).toFixed(2)} shares of SPY at $${latestSpyQuote.price.toFixed(2)} today</p>`;
   }
 
-  const periodsPerYear = { weekly: 52, monthly: 12, yearly: 1 }[cadence];
-  const periodRate = Math.pow(1 + annualReturn, 1 / periodsPerYear) - 1;
-  const totalPeriods = years * periodsPerYear;
-  const futureValue = amount * ((Math.pow(1 + periodRate, totalPeriods) - 1) / periodRate);
-  const totalContributed = amount * totalPeriods;
-  const gain = futureValue - totalContributed;
-
   investResultEl.innerHTML = `
-    ${tickerLine}
-    <p>${formatMoney(amount)}/${cadence.replace("ly", "")} at 7%/yr: ${formatMoney(futureValue)} in ${years} year${years == 1 ? "" : "s"}</p>
-    <p>(${formatMoney(totalContributed)} contributed · ${formatMoney(gain)} of growth, a rough estimate, not a guarantee)</p>
+    <div class="invest-big-number">${formatMoney(futureValue)}</div>
+    <p class="invest-caption">${formatMoney(amount)} ${cadenceLabel} over ${years} year${years == 1 ? "" : "s"}, at a 7%/yr market-average estimate</p>
+    ${sharesLine}
+    ${spyLine}
+    ${compareSpyCheckEl.checked && latestSpyQuote ? '<p class="invest-caption">Same growth estimate applied to both. We don\'t have real historical performance data to show which would actually have done better.</p>' : ""}
   `;
 }
 
@@ -1227,6 +1294,247 @@ manualSubmitBtnEl.addEventListener("click", async () => {
 });
 
 // ---------------------------------------------------------------
+// Net worth percentile — sourced benchmarks, Federal Reserve Survey of
+// Consumer Finances (2022, most recent published survey as of this build;
+// the 2025 survey's results aren't out yet). Uses the person's age from
+// Settings — shows nothing if age hasn't been entered, rather than
+// guessing which bracket to compare against.
+// ---------------------------------------------------------------
+
+const NET_WORTH_MEDIAN_BY_AGE = [
+  { maxAge: 34, median: 39000, label: "under 35" },
+  { maxAge: 44, median: 135600, label: "35-44" },
+  { maxAge: 54, median: 247200, label: "45-54" },
+  { maxAge: 64, median: 364500, label: "55-64" },
+  { maxAge: 74, median: 409900, label: "65-74" },
+  { maxAge: Infinity, median: 335600, label: "75+" },
+];
+
+function renderPercentile(data) {
+  const age = parseFloat(localStorage.getItem("ledger_settings_age"));
+  if (isNaN(age) || age <= 0) {
+    percentileLineEl.textContent = "";
+    return;
+  }
+
+  const bracket = NET_WORTH_MEDIAN_BY_AGE.find((b) => age <= b.maxAge);
+  const diff = data.net_worth - bracket.median;
+  const diffPct = Math.abs((diff / bracket.median) * 100).toFixed(0);
+  const direction = diff >= 0 ? "above" : "below";
+
+  percentileLineEl.textContent = `${diffPct}% ${direction} the median net worth for ages ${bracket.label} ($${bracket.median.toLocaleString()}, Federal Reserve SCF 2022)`;
+}
+
+// ---------------------------------------------------------------
+// Net worth milestones — next round-number target above current net worth
+// ---------------------------------------------------------------
+
+function nextMilestone(netWorth) {
+  const steps = [10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2000000, 5000000, 10000000];
+  for (const step of steps) {
+    if (netWorth < step) return step;
+  }
+  // Beyond $10M, just round up to the next $5M.
+  return Math.ceil((netWorth + 1) / 5000000) * 5000000;
+}
+
+function renderMilestone(data) {
+  const milestone = nextMilestone(data.net_worth);
+  const prevMilestoneIdx = [0, 10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2000000, 5000000].filter((s) => s < milestone).pop() ?? 0;
+  const pct = clamp(((data.net_worth - prevMilestoneIdx) / (milestone - prevMilestoneIdx)) * 100, 0, 100);
+
+  milestoneBarEl.style.width = `${pct}%`;
+  milestoneCaptionEl.textContent = `${formatMoney(milestone - data.net_worth)} to $${milestone.toLocaleString()}`;
+}
+
+// ---------------------------------------------------------------
+// Emergency fund tracker — runway vs. a standard 6-month benchmark
+// ---------------------------------------------------------------
+
+function renderEmergencyFund(data) {
+  if (!data || !latestTransactions?.fixed_spend_30d) {
+    emergencyFundCaptionEl.textContent = "Needs a bit more transaction history to calculate.";
+    emergencyFundBarEl.style.width = "0%";
+    return;
+  }
+
+  const months = data.liquid_cash / latestTransactions.fixed_spend_30d;
+  const targetMonths = 6;
+  const pct = clamp((months / targetMonths) * 100, 0, 100);
+
+  emergencyFundBarEl.style.width = `${pct}%`;
+  emergencyFundCaptionEl.textContent = `${months.toFixed(1)} of ${targetMonths} months covered (standard emergency-fund target)`;
+}
+
+// ---------------------------------------------------------------
+// Subscription audit — real recurring-charge detection using a 90-day
+// window (long enough for a monthly charge to appear 2+ times), not a
+// guess dressed up as a feature.
+// ---------------------------------------------------------------
+
+async function loadSubscriptionAudit() {
+  subscriptionListEl.innerHTML = `<div class="empty-state">Loading…</div>`;
+  try {
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const today = new Date();
+
+    const data = await callFunction("get-transactions", {
+      start_date: fmt(ninetyDaysAgo),
+      end_date: fmt(today),
+    });
+
+    const recurring = data.recurring_candidates ?? [];
+    if (recurring.length === 0) {
+      subscriptionListEl.innerHTML = `<div class="empty-state">No repeat charges detected in the last 90 days.</div>`;
+      return;
+    }
+
+    subscriptionListEl.innerHTML = recurring
+      .slice(0, 10)
+      .map(
+        (r) => `
+        <div class="subscription-row">
+          <span>${r.name}</span>
+          <span class="mono">${formatMoney(r.total / r.count)}/charge · ${r.count}x</span>
+        </div>`
+      )
+      .join("");
+  } catch (err) {
+    subscriptionListEl.innerHTML = `<div class="empty-state">Couldn't load: ${err.message}</div>`;
+  }
+}
+
+// ---------------------------------------------------------------
+// Debt payoff comparison — snowball (smallest balance first) vs.
+// avalanche (highest APR first), using real balances from get-balances
+// and real APRs/minimums from get-liabilities.
+// ---------------------------------------------------------------
+
+async function loadDebtPayoff() {
+  debtPayoffListEl.innerHTML = `<div class="empty-state">Loading…</div>`;
+  debtPayoffSummaryEl.textContent = "";
+
+  try {
+    const liabData = await callFunction("get-liabilities");
+    const debts = liabData.debts ?? [];
+
+    if (debts.length === 0) {
+      debtPayoffListEl.innerHTML = `<div class="empty-state">No liability detail available (not every institution supports this, or you have no debt connected).</div>`;
+      return;
+    }
+
+    // Match balances by account_id, not array position — Plaid doesn't
+    // guarantee liabilities and balances come back in the same order.
+    const accountsById = new Map((latestBalances?.accounts ?? []).map((a) => [a.account_id, a]));
+
+    const enriched = debts.map((d) => ({
+      ...d,
+      balance: accountsById.get(d.account_id)?.current ?? null,
+    }));
+
+    const avalancheOrder = [...enriched].sort((a, b) => (b.apr ?? 0) - (a.apr ?? 0));
+
+    debtPayoffListEl.innerHTML = avalancheOrder
+      .map(
+        (d, i) => `
+        <div class="debt-row">
+          <div class="debt-row-meta">
+            <span>${i + 1}. ${d.name}</span>
+            <span class="debt-row-sub">${d.apr !== null ? d.apr.toFixed(2) + "% APR" : "APR not available"}${d.balance !== null ? " · " + formatMoney(d.balance) : ""}</span>
+          </div>
+          <span class="mono">${d.minimum_payment !== null ? formatMoney(d.minimum_payment) + "/mo min" : ""}</span>
+        </div>`
+      )
+      .join("");
+
+    debtPayoffSummaryEl.textContent = "Sorted highest APR first (avalanche method, usually saves the most in interest). Pay minimums on everything else, put extra toward #1.";
+  } catch (err) {
+    debtPayoffListEl.innerHTML = `<div class="empty-state">Couldn't load: ${err.message}</div>`;
+  }
+}
+
+// ---------------------------------------------------------------
+// Purchase watchlist — saved locally on this device
+// ---------------------------------------------------------------
+
+function getWatchlist() {
+  try {
+    return JSON.parse(localStorage.getItem("ledger_watchlist") ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveWatchlist(list) {
+  localStorage.setItem("ledger_watchlist", JSON.stringify(list));
+}
+
+function renderWatchlist() {
+  const list = getWatchlist();
+  if (list.length === 0) {
+    watchlistListEl.innerHTML = `<div class="empty-state">Nothing on your watchlist yet.</div>`;
+    return;
+  }
+
+  watchlistListEl.innerHTML = list
+    .map((item, i) => {
+      const pctOfLiquid = latestBalances ? ((item.amount / latestBalances.liquid_cash) * 100).toFixed(0) : null;
+      return `
+        <div class="watchlist-row">
+          <div class="watchlist-row-meta">
+            <span>${item.label}</span>
+            <span class="debt-row-sub">${formatMoney(item.amount)}${pctOfLiquid !== null ? " · " + pctOfLiquid + "% of liquid cash" : ""}</span>
+          </div>
+          <button class="watchlist-remove-btn" data-idx="${i}">Remove</button>
+        </div>`;
+    })
+    .join("");
+
+  watchlistListEl.querySelectorAll(".watchlist-remove-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const list = getWatchlist();
+      list.splice(parseInt(btn.dataset.idx, 10), 1);
+      saveWatchlist(list);
+      renderWatchlist();
+    });
+  });
+}
+
+addWatchlistBtnEl.addEventListener("click", () => {
+  addWatchlistFormEl.classList.toggle("hidden");
+});
+
+watchlistSubmitBtnEl.addEventListener("click", () => {
+  const label = watchlistLabelEl.value.trim();
+  const amount = parseFloat(watchlistAmountEl.value);
+  if (!label || isNaN(amount) || amount <= 0) return;
+
+  const list = getWatchlist();
+  list.push({ label, amount });
+  saveWatchlist(list);
+  watchlistLabelEl.value = "";
+  watchlistAmountEl.value = "";
+  addWatchlistFormEl.classList.add("hidden");
+  renderWatchlist();
+});
+
+renderWatchlist();
+
+// ---------------------------------------------------------------
+// Insurance/estate checklist — saved locally, educational only
+// ---------------------------------------------------------------
+
+document.querySelectorAll("#insurance-checklist input[type='checkbox']").forEach((box) => {
+  const key = `ledger_checklist_${box.dataset.check}`;
+  box.checked = localStorage.getItem(key) === "true";
+  box.addEventListener("change", () => {
+    localStorage.setItem(key, box.checked);
+  });
+});
+
+// ---------------------------------------------------------------
 // PWA — register service worker for installability/offline shell
 // ---------------------------------------------------------------
 
@@ -1264,6 +1572,16 @@ faqQuestionSubmitEl.addEventListener("click", () => {
   window.location.href = `mailto:${BOOKING_EMAIL}?subject=${subject}&body=${body}`;
   faqQuestionInputEl.value = "";
   faqQuestionStatusEl.textContent = "Your question has been submitted. You'll hear back within 1-2 business days.";
+});
+
+amaQuestionSubmitEl.addEventListener("click", () => {
+  const question = amaQuestionInputEl.value.trim();
+  if (!question) return;
+  const subject = encodeURIComponent("Ledger question");
+  const body = encodeURIComponent(question);
+  window.location.href = `mailto:${BOOKING_EMAIL}?subject=${subject}&body=${body}`;
+  amaQuestionInputEl.value = "";
+  amaQuestionStatusEl.textContent = "Your question has been submitted. You'll hear back within 1-2 business days.";
 });
 
 // ---------------------------------------------------------------

@@ -48,6 +48,8 @@ html, body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .hidden { display: none !important; }
@@ -144,6 +146,9 @@ html, body {
   height: 32px;
   font-size: 16px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .icon-btn:focus-visible,
@@ -483,7 +488,7 @@ select:focus-visible {
 }
 
 .check-label {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink-dim);
   margin-bottom: 10px;
 }
@@ -504,7 +509,8 @@ select:focus-visible {
   margin-right: 4px;
 }
 
-.check-input-row input[type="number"] {
+.check-input-row input[type="number"],
+.check-input-row input[type="text"] {
   flex: 1;
   background: none;
   border: none;
@@ -515,7 +521,8 @@ select:focus-visible {
   text-align: center;
 }
 
-.check-input-row input[type="number"]:focus { outline: none; }
+.check-input-row input[type="number"]:focus,
+.check-input-row input[type="text"]:focus { outline: none; }
 
 .check-input-row select {
   flex: 1;
@@ -682,9 +689,29 @@ select:focus-visible {
 .goal-result,
 .invest-result {
   margin-top: 10px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink-dim);
   line-height: 1.6;
+}
+
+.invest-big-number {
+  font-family: var(--font-mono);
+  font-size: 40px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.invest-caption {
+  font-size: 13px;
+  color: var(--ink-dim);
+  margin: 4px 0;
+}
+
+.invest-shares-line {
+  font-size: 13px;
+  color: var(--ink-dim);
+  margin: 2px 0;
 }
 
 .invest-inputs {
@@ -714,7 +741,7 @@ select:focus-visible {
 .accounts { padding: 20px 0; }
 
 .section-label {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink-dim);
   margin-bottom: 12px;
 }
@@ -901,16 +928,16 @@ select:focus-visible {
 }
 
 .forecast-mini-field label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ink-dim);
 }
 
 .forecast-mini-field input {
-  width: 70px;
+  width: 90px;
   background: var(--bg-raised);
   border: 1px solid var(--hairline);
   border-radius: 6px;
-  padding: 6px;
+  padding: 8px 6px;
   color: var(--ink);
   font-family: var(--font-mono);
   font-size: 14px;
@@ -918,7 +945,7 @@ select:focus-visible {
 }
 
 .forecast-mini-field span {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ink-dim);
 }
 
@@ -1107,6 +1134,108 @@ select:focus-visible {
   width: 16px;
   height: 16px;
   accent-color: var(--accent);
+}
+
+.percentile-line {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--hairline);
+  font-size: 13px;
+  color: var(--ink-dim);
+  text-align: left;
+}
+
+.mini-stat-section {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.progress-bar-wrap {
+  width: 100%;
+  height: 10px;
+  background: var(--bg-raised);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 6px 0 0 6px;
+  transition: width 0.6s ease;
+  width: 0%;
+}
+
+.milestone-fill {
+  background: #D9A24F;
+}
+
+.mini-stat-caption {
+  font-size: 12px;
+  color: var(--ink-dim);
+  margin-top: 6px;
+  text-align: left;
+}
+
+.subscription-section,
+.debt-payoff-section,
+.watchlist-section {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--hairline);
+  text-align: left;
+}
+
+.subscription-list,
+.debt-payoff-list,
+.watchlist-list {
+  margin-top: 10px;
+}
+
+.subscription-row,
+.debt-row,
+.watchlist-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 14px;
+}
+
+.subscription-row:last-child,
+.debt-row:last-child,
+.watchlist-row:last-child { border-bottom: none; }
+
+.debt-row-meta,
+.watchlist-row-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.debt-row-sub {
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+
+.watchlist-remove-btn {
+  background: none;
+  border: 1px solid var(--hairline);
+  color: var(--ink-dim);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.insurance-checklist {
+  margin-top: 10px;
+  text-align: left;
+}
+
+.insurance-checklist .checkbox-row {
+  margin-top: 8px;
 }
 
 .no-brokerage-panel {

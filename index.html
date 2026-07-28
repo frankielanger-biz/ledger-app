@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>Ledger</title>
 <meta name="theme-color" content="#070B0A" />
 <link rel="manifest" href="manifest.json" />
@@ -74,7 +74,16 @@
 
     <header class="topbar">
       <span id="topbar-status" class="topbar-status"></span>
-      <button id="discrete-toggle-btn" class="icon-btn" title="Discrete mode">👁</button>
+      <button id="discrete-toggle-btn" class="icon-btn" title="Discrete mode">
+        <svg id="eye-open-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+        <svg id="eye-closed-icon" class="hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+          <line x1="1" y1="1" x2="23" y2="23"></line>
+        </svg>
+      </button>
       <button id="refresh-btn" class="icon-btn" title="Refresh">↻</button>
     </header>
 
@@ -104,10 +113,12 @@
 
           <div class="score-face score-face-back">
             <div class="section-label">Spending breakdown</div>
-            <div class="spending-period-toggle">
-              <button class="spending-period-btn" data-period="day">Day</button>
-              <button class="spending-period-btn active" data-period="week">Week</button>
-            </div>
+            <select id="spending-month-select" class="afford-category-select spending-month-select">
+              <option value="0">This month, so far</option>
+              <option value="1">Last month</option>
+              <option value="2">2 months ago</option>
+              <option value="3">3 months ago</option>
+            </select>
             <div class="spending-pie-wrap">
               <canvas id="spending-pie-canvas" width="160" height="160"></canvas>
             </div>
@@ -132,6 +143,23 @@
         <span class="ledger-label">Total liabilities</span>
         <span class="ledger-value negative" id="total-liabilities-value">—</span>
       </div>
+      <div id="percentile-line" class="percentile-line"></div>
+    </section>
+
+    <section class="mini-stat-section">
+      <div class="section-label">Emergency fund</div>
+      <div id="emergency-fund-bar-wrap" class="progress-bar-wrap">
+        <div id="emergency-fund-bar" class="progress-bar-fill"></div>
+      </div>
+      <div id="emergency-fund-caption" class="mini-stat-caption"></div>
+    </section>
+
+    <section class="mini-stat-section">
+      <div class="section-label">Next milestone</div>
+      <div id="milestone-bar-wrap" class="progress-bar-wrap">
+        <div id="milestone-bar" class="progress-bar-fill milestone-fill"></div>
+      </div>
+      <div id="milestone-caption" class="mini-stat-caption"></div>
     </section>
 
     <section class="trend-section">
@@ -181,7 +209,7 @@
     </section>
 
     <section class="check-block">
-      <div class="check-label">Can I afford it?</div>
+      <div class="check-label">New purchase impact</div>
       <div class="check-input-row">
         <span class="dollar-sign">$</span>
         <input type="number" id="afford-input" inputmode="decimal" placeholder="0" />
@@ -221,6 +249,11 @@
         </div>
         <div id="invest-ticker-quote" class="ticker-result"></div>
 
+        <label class="checkbox-row">
+          <input type="checkbox" id="compare-spy-check" />
+          <span>Compare to SPY</span>
+        </label>
+
         <div class="invest-inputs">
           <div class="check-input-row">
             <span class="dollar-sign">$</span>
@@ -234,12 +267,37 @@
         <div class="check-input-row invest-cadence-row">
           <select id="invest-cadence">
             <option value="once">One-time</option>
-            <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
             <option value="yearly">Yearly</option>
           </select>
         </div>
         <div id="invest-result" class="invest-result"></div>
+      </div>
+    </section>
+
+    <section class="subscription-section">
+      <div class="section-label">Subscription audit</div>
+      <div class="mini-stat-caption">Merchants that charged you 2+ times in the last 90 days.</div>
+      <div id="subscription-list" class="subscription-list"></div>
+    </section>
+
+    <section class="debt-payoff-section">
+      <div class="section-label">Debt payoff comparison</div>
+      <div id="debt-payoff-list" class="debt-payoff-list"></div>
+      <div id="debt-payoff-summary" class="mini-stat-caption"></div>
+    </section>
+
+    <section class="watchlist-section">
+      <div class="section-label">Purchase watchlist</div>
+      <div id="watchlist-list" class="watchlist-list"></div>
+      <button id="add-watchlist-btn" class="connect-btn">+ Add something you're saving for</button>
+      <div id="add-watchlist-form" class="add-manual-form hidden">
+        <input type="text" id="watchlist-label" placeholder="What is it? e.g. New laptop" />
+        <div class="check-input-row">
+          <span class="dollar-sign">$</span>
+          <input type="number" id="watchlist-amount" inputmode="decimal" placeholder="Target amount" />
+        </div>
+        <button id="watchlist-submit-btn" class="book-call-btn manual-submit-btn">Add it</button>
       </div>
     </section>
 
@@ -313,7 +371,14 @@
       <a id="book-call-btn" class="book-call-btn" href="#" target="_blank" rel="noopener">
         Book a call
       </a>
-      <div class="placeholder-note">Calendly link pending, placeholder for now</div>
+    </div>
+
+    <div class="ask-question-box">
+      <div class="resource-card-title">Or just ask a question</div>
+      <div class="faq-response-note">I'll respond to you directly, generally within 1-2 business days.</div>
+      <textarea id="ama-question-input" placeholder="Type your question…" rows="3"></textarea>
+      <button id="ama-question-submit" class="book-call-btn manual-submit-btn">Submit</button>
+      <div id="ama-question-status" class="dashboard-status"></div>
     </div>
   </section>
 
@@ -455,6 +520,18 @@
         shows today's real price in the meantime.
       </div>
     </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">Insurance and estate checklist</div>
+      <div class="resource-card-desc">Educational only, not advice. Check what applies to you.</div>
+      <div id="insurance-checklist" class="insurance-checklist">
+        <label class="checkbox-row"><input type="checkbox" data-check="will" /><span>I have a will</span></label>
+        <label class="checkbox-row"><input type="checkbox" data-check="beneficiaries" /><span>Beneficiaries are up to date on my accounts</span></label>
+        <label class="checkbox-row"><input type="checkbox" data-check="life" /><span>I have life insurance, if I have dependents</span></label>
+        <label class="checkbox-row"><input type="checkbox" data-check="health" /><span>I have health insurance</span></label>
+        <label class="checkbox-row"><input type="checkbox" data-check="disability" /><span>I have disability insurance</span></label>
+      </div>
+    </div>
   </section>
 
   <!-- ===================== SETTINGS TAB ===================== -->
@@ -519,6 +596,10 @@
       </div>
       <div class="notification-row">
         <span>Purchase alerts</span>
+        <span class="coming-soon-pill">Coming soon</span>
+      </div>
+      <div class="notification-row">
+        <span>Monthly digest</span>
         <span class="coming-soon-pill">Coming soon</span>
       </div>
     </div>
