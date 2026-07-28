@@ -2,7 +2,7 @@
 // user's own session token, and Row Level Security in the database
 // enforces that they only ever see their own data.
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const FN_BASE = `${SUPABASE_URL}/functions/v1`;
 
 const authScreenEl = document.getElementById("auth-screen");
@@ -258,7 +258,7 @@ function clamp(n, min, max) {
 async function callFunction(name, body) {
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await supabaseClient.auth.getSession();
 
   const res = await fetch(`${FN_BASE}/${name}`, {
     method: "POST",
@@ -1714,7 +1714,7 @@ inviteFriendsBtnEl.addEventListener("click", async () => {
 const signOutBtnEl = document.getElementById("sign-out-btn");
 
 signOutBtnEl.addEventListener("click", async () => {
-  await supabase.auth.signOut();
+  await supabaseClient.auth.signOut();
 });
 
 // ---------------------------------------------------------------
@@ -1740,8 +1740,8 @@ authFormEl.addEventListener("submit", async (e) => {
 
   const { error } =
     authMode === "signin"
-      ? await supabase.auth.signInWithPassword({ email, password })
-      : await supabase.auth.signUp({ email, password });
+      ? await supabaseClient.auth.signInWithPassword({ email, password })
+      : await supabaseClient.auth.signUp({ email, password });
 
   authSubmitBtnEl.disabled = false;
 
@@ -1768,7 +1768,7 @@ function showApp() {
   }
 }
 
-supabase.auth.onAuthStateChange((_event, session) => {
+supabaseClient.auth.onAuthStateChange((_event, session) => {
   if (session) {
     showApp();
   } else {
@@ -1779,7 +1779,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
 
 // Initial check on page load, in case a session is already stored from a
 // previous visit.
-supabase.auth.getSession().then(({ data: { session } }) => {
+supabaseClient.auth.getSession().then(({ data: { session } }) => {
   if (session) showApp();
   else showAuthScreen();
 });
