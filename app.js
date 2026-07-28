@@ -3,6 +3,19 @@
 // enforces that they only ever see their own data.
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function showToast(message, type = "success") {
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add("toast-out");
+    setTimeout(() => toast.remove(), 220);
+  }, 2200);
+}
 const FN_BASE = `${SUPABASE_URL}/functions/v1`;
 
 const authScreenEl = document.getElementById("auth-screen");
@@ -14,9 +27,11 @@ const authSubmitBtnEl = document.getElementById("auth-submit-btn");
 const authStatusEl = document.getElementById("auth-status");
 const authToggleBtnEl = document.getElementById("auth-toggle-btn");
 const authTitleEl = document.getElementById("auth-title");
+const authCardEl = document.querySelector(".auth-card");
 
 let authMode = "signin"; // or "signup"
 let appHasBooted = false;
+let justSignedUp = false;
 
 const netWorthValueEl = document.getElementById("net-worth-value");
 const netWorthDeltaEl = document.getElementById("net-worth-delta");
@@ -1304,6 +1319,7 @@ manualSubmitBtnEl.addEventListener("click", async () => {
     manualAmountEl.value = "";
     manualAddStatusEl.textContent = "Added.";
     addManualFormEl.classList.add("hidden");
+    showToast(`${label} added`);
     await loadEverything();
   } catch (err) {
     manualAddStatusEl.textContent = `Couldn't add it: ${err.message}`;
@@ -1536,6 +1552,7 @@ watchlistSubmitBtnEl.addEventListener("click", () => {
   watchlistLabelEl.value = "";
   watchlistAmountEl.value = "";
   addWatchlistFormEl.classList.add("hidden");
+  showToast(`${label} added to watchlist`);
   renderWatchlist();
 });
 
@@ -1622,6 +1639,7 @@ settingsSaveBtnEl.addEventListener("click", () => {
   localStorage.setItem("ledger_settings_age", settingsAgeEl.value.trim());
   localStorage.setItem("ledger_settings_birthday", settingsBirthdayEl.value.trim());
   settingsSaveStatusEl.textContent = "Saved.";
+  showToast("Settings saved");
   setTimeout(() => (settingsSaveStatusEl.textContent = ""), 2000);
 });
 
@@ -1728,6 +1746,7 @@ authToggleBtnEl.addEventListener("click", () => {
   authToggleBtnEl.textContent =
     authMode === "signin" ? "Don't have an account? Sign up" : "Already have an account? Sign in";
   authStatusEl.textContent = "";
+  authCardEl.classList.toggle("signup-mode", authMode === "signup");
 });
 
 authFormEl.addEventListener("submit", async (e) => {
@@ -1737,6 +1756,7 @@ authFormEl.addEventListener("submit", async (e) => {
 
   const email = authEmailEl.value.trim();
   const password = authPasswordEl.value;
+  const wasSigningUp = authMode === "signup";
 
   const { error } =
     authMode === "signin"
@@ -1750,6 +1770,7 @@ authFormEl.addEventListener("submit", async (e) => {
     return;
   }
 
+  if (wasSigningUp) justSignedUp = true;
   authStatusEl.textContent = "";
   // onAuthStateChange below handles showing the app once the session lands.
 });
@@ -1764,6 +1785,10 @@ function showApp() {
   appRootEl.classList.remove("hidden");
   if (!appHasBooted) {
     appHasBooted = true;
+    if (justSignedUp) {
+      document.querySelector('.topnav-tab[data-tab="getting-started"]').click();
+      justSignedUp = false;
+    }
     loadEverything();
   }
 }
