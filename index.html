@@ -37,9 +37,6 @@
 
   <!-- ===================== GETTING STARTED TAB ===================== -->
   <section class="page-panel tab-panel hidden" data-panel="getting-started">
-    <div class="page-title">Getting Started</div>
-    <div class="page-sub">What Ledger is, and who it's for.</div>
-
     <div class="resource-card">
       <div class="resource-card-title">What this is</div>
       <div class="resource-card-desc">
@@ -146,6 +143,16 @@
       <div id="percentile-line" class="percentile-line"></div>
     </section>
 
+    <section class="trend-section">
+      <div class="section-label">Net worth trend</div>
+      <div class="trend-canvas-wrap">
+        <canvas id="trend-canvas" width="600" height="120"></canvas>
+        <div id="trend-tooltip" class="trend-tooltip"></div>
+      </div>
+      <div id="trend-axis-labels" class="trend-axis-labels"></div>
+      <button id="forecast-btn" class="forecast-btn">Forecast this →</button>
+    </section>
+
     <section class="mini-stat-section">
       <div class="section-label">Emergency fund</div>
       <div id="emergency-fund-bar-wrap" class="progress-bar-wrap">
@@ -162,26 +169,12 @@
       <div id="milestone-caption" class="mini-stat-caption"></div>
     </section>
 
-    <section class="trend-section">
-      <div class="section-label">Net worth trend</div>
-      <div class="trend-canvas-wrap">
-        <canvas id="trend-canvas" width="600" height="120"></canvas>
-        <div id="trend-tooltip" class="trend-tooltip"></div>
-      </div>
-      <div id="trend-axis-labels" class="trend-axis-labels"></div>
-      <button id="forecast-btn" class="forecast-btn">Forecast this →</button>
-    </section>
-
     <p id="dashboard-status" class="dashboard-status"></p>
 
   </main>
 
   <!-- ===================== MANAGE TAB ===================== -->
   <section class="screen tab-panel hidden" data-panel="manage">
-
-    <div class="page-header">
-      <div class="page-title">Manage</div>
-    </div>
 
     <section class="accounts">
       <div class="section-label">Accounts</div>
@@ -306,11 +299,8 @@
   <!-- ===================== FORECAST TAB ===================== -->
   <section class="screen tab-panel hidden" data-panel="forecast">
 
-    <div class="page-header">
-      <div class="page-title">Forecast <span class="beta-pill">BETA</span></div>
-    </div>
-
     <section class="goal-section">
+      <span class="beta-pill beta-pill-standalone">BETA</span>
       <div class="section-label">Goal net worth</div>
       <div class="check-input-row">
         <span class="dollar-sign">$</span>
@@ -356,8 +346,6 @@
 
   <!-- ===================== BOOK A CALL TAB ===================== -->
   <section class="page-panel tab-panel hidden" data-panel="book-call">
-    <div class="page-title">Book a call</div>
-
     <div class="book-call-card">
       <select id="book-call-topic" class="afford-category-select">
         <option value="">What do you want to talk about?</option>
@@ -384,9 +372,6 @@
 
   <!-- ===================== FAQ TAB ===================== -->
   <section class="page-panel tab-panel hidden" data-panel="faq">
-    <div class="page-title">FAQ</div>
-    <div class="page-sub">Common questions about how Ledger works.</div>
-
     <div class="faq-item">
       <div class="faq-question">Is my data safe? <span>+</span></div>
       <div class="faq-answer">
@@ -433,8 +418,6 @@
 
   <!-- ===================== RESOURCES TAB (education content lives here) ===================== -->
   <section class="page-panel tab-panel hidden" data-panel="resources">
-    <div class="page-title">Resources</div>
-
     <div class="resource-card">
       <div class="resource-card-title">What's a stock?</div>
       <div class="resource-card-desc">
@@ -536,8 +519,6 @@
 
   <!-- ===================== SETTINGS TAB ===================== -->
   <section class="page-panel tab-panel hidden" data-panel="settings">
-    <div class="page-title">Settings</div>
-
     <div class="settings-section-label">Personal info</div>
     <div class="settings-grid">
       <div class="settings-field">
@@ -618,9 +599,6 @@
 
   <!-- ===================== IN PROGRESS TAB ===================== -->
   <section class="page-panel tab-panel hidden" data-panel="beta">
-    <div class="page-title">In Progress</div>
-    <div class="page-sub">What's coming, not live yet.</div>
-
     <div class="resource-card">
       <div class="resource-card-title">Purchase notifications</div>
       <div class="resource-card-desc">Text or email alert when you spend, tied into the afford-check.</div>
