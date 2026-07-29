@@ -146,18 +146,85 @@ const DISCRETIONARY_CHECK_CATEGORIES = new Set(["discretionary", "subscription"]
 const tabButtons = document.querySelectorAll(".topnav-tab");
 const tabPanels = document.querySelectorAll(".tab-panel");
 
+const TAB_INTROS = {
+  "dashboard": {
+    title: "Dashboard",
+    text: "Your net worth, financial health score, and recent trend, at a glance.",
+  },
+  "getting-started": {
+    title: "Getting Started",
+    text: "Your setup checklist — connect a bank and fill in a few basics to get Ledger dialed in.",
+  },
+  "manage": {
+    title: "Manage",
+    text: "Connect banks, add things that aren't linked, and track subscriptions, debt payoff, and savings goals.",
+  },
+  "forecast": {
+    title: "Forecast (Beta)",
+    text: "A projection of where your net worth is headed based on your recent trend. Still early, take it as a rough guide.",
+  },
+  "book-call": {
+    title: "Book a call",
+    text: "Grab time for personalized help going over your numbers.",
+  },
+  "faq": {
+    title: "FAQ",
+    text: "Quick answers to the questions people ask most about how Ledger works.",
+  },
+  "resources": {
+    title: "Resources",
+    text: "Guides and checklists, like the insurance/estate basics, to help you get your full financial picture in order.",
+  },
+  "settings": {
+    title: "Settings",
+    text: "Your profile, notifications, connected banks, and theme all live here.",
+  },
+  "beta": {
+    title: "In Progress",
+    text: "A preview of what's being built next for Ledger.",
+  },
+};
+
+const tabIntroOverlayEl = document.getElementById("tab-intro-overlay");
+const tabIntroTitleEl = document.getElementById("tab-intro-title");
+const tabIntroTextEl = document.getElementById("tab-intro-text");
+const tabIntroDismissEl = document.getElementById("tab-intro-dismiss");
+
+function maybeShowTabIntro(tabName) {
+  const intro = TAB_INTROS[tabName];
+  if (!intro) return;
+  const seenKey = `ledger_seen_tab_${tabName}`;
+  if (localStorage.getItem(seenKey) === "true") return;
+
+  tabIntroTitleEl.textContent = intro.title;
+  tabIntroTextEl.textContent = intro.text;
+  tabIntroOverlayEl.classList.remove("hidden");
+
+  const dismiss = () => {
+    localStorage.setItem(seenKey, "true");
+    tabIntroOverlayEl.classList.add("hidden");
+  };
+  tabIntroDismissEl.onclick = dismiss;
+}
+
 tabButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
     const target = btn.dataset.tab;
     tabButtons.forEach((b) => b.classList.toggle("active", b === btn));
     tabPanels.forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== target));
     btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    maybeShowTabIntro(target);
   });
 });
 
 ledgerBrandEl.addEventListener("click", () => {
   const dashboardBtn = document.querySelector('.topnav-tab[data-tab="dashboard"]');
   dashboardBtn.click();
+});
+
+document.getElementById("no-bank-banner-btn").addEventListener("click", () => {
+  document.querySelector('.topnav-tab[data-tab="manage"]').click();
+  setTimeout(() => connectBtn.click(), 300);
 });
 
 // ---------------------------------------------------------------
@@ -402,8 +469,10 @@ function renderBalances(data) {
   accountsListEl.innerHTML = "";
   if (!data.accounts || data.accounts.length === 0) {
     accountsListEl.innerHTML = `<div class="empty-state">No accounts connected yet.</div>`;
+    document.getElementById("no-bank-banner").classList.remove("hidden");
     return;
   }
+  document.getElementById("no-bank-banner").classList.add("hidden");
 
   for (const acct of data.accounts) {
     const row = document.createElement("div");
@@ -1236,6 +1305,7 @@ function renderAllocation(data) {
     Cash: { total: 0, items: [] },
     Investments: { total: 0, items: [] },
     "Real estate": { total: 0, items: [] },
+    "Private/alternative": { total: 0, items: [] },
     Other: { total: 0, items: [] },
   };
 
@@ -1250,7 +1320,11 @@ function renderAllocation(data) {
 
   for (const item of data.manual_items ?? []) {
     if (item.amount <= 0) continue;
-    const bucket = item.category === "real_estate" ? "Real estate" : "Other";
+    let bucket = "Other";
+    if (item.category === "real_estate") bucket = "Real estate";
+    else if (item.category === "private_equity" || item.category === "venture" || item.category === "other_illiquid") {
+      bucket = "Private/alternative";
+    }
     buckets[bucket].items.push({ label: item.label, amount: item.amount });
   }
 
@@ -1357,7 +1431,7 @@ function renderPercentile(data) {
   const diffPct = Math.abs((diff / bracket.median) * 100).toFixed(0);
   const direction = diff >= 0 ? "above" : "below";
 
-  percentileLineEl.textContent = `${diffPct}% ${direction} the median net worth for ages ${bracket.label} ($${bracket.median.toLocaleString()}, Federal Reserve SCF 2022)`;
+  percentileLineEl.textContent = `${diffPct}% ${direction} the median net worth (national average) for ages ${bracket.label} ($${bracket.median.toLocaleString()}, Federal Reserve SCF 2022)`;
 }
 
 // ---------------------------------------------------------------
@@ -1557,6 +1631,36 @@ watchlistSubmitBtnEl.addEventListener("click", () => {
 });
 
 renderWatchlist();
+
+// ---------------------------------------------------------------
+// Complex investments question (Getting Started) — gates the
+// advanced manual-item categories so beginners aren't shown them
+// ---------------------------------------------------------------
+
+function applyComplexInvestState() {
+  const has = localStorage.getItem("ledger_has_complex_investments") === "true";
+  document.querySelectorAll(".advanced-category").forEach((opt) => {
+    opt.hidden = !has;
+  });
+  document.getElementById("complex-invest-yes")?.classList.toggle("active", has);
+  document.getElementById("complex-invest-no")?.classList.toggle(
+    "active",
+    localStorage.getItem("ledger_has_complex_investments") === "false"
+  );
+}
+
+document.getElementById("complex-invest-yes")?.addEventListener("click", () => {
+  localStorage.setItem("ledger_has_complex_investments", "true");
+  applyComplexInvestState();
+  showToast("Advanced categories added to Manage");
+});
+
+document.getElementById("complex-invest-no")?.addEventListener("click", () => {
+  localStorage.setItem("ledger_has_complex_investments", "false");
+  applyComplexInvestState();
+});
+
+applyComplexInvestState();
 
 // ---------------------------------------------------------------
 // Insurance/estate checklist — saved locally, educational only
@@ -1788,6 +1892,8 @@ function showApp() {
     if (justSignedUp) {
       document.querySelector('.topnav-tab[data-tab="getting-started"]').click();
       justSignedUp = false;
+    } else {
+      maybeShowTabIntro("dashboard");
     }
     loadEverything();
   }

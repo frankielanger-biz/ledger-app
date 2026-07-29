@@ -37,6 +37,13 @@
   </section>
 
   <div id="toast-container"></div>
+  <div id="tab-intro-overlay" class="tab-intro-overlay hidden">
+    <div class="tab-intro-card">
+      <div class="tab-intro-title" id="tab-intro-title"></div>
+      <div class="tab-intro-text" id="tab-intro-text"></div>
+      <button id="tab-intro-dismiss" class="book-call-btn tab-intro-dismiss">Got it</button>
+    </div>
+  </div>
   <div id="app-root" class="hidden">
 
   <nav class="topnav">
@@ -85,6 +92,18 @@
         fills in automatically from there.
       </div>
     </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">Do you have private investments?</div>
+      <div class="resource-card-desc">
+        Things like private equity, real estate syndications, venture/startup equity, or other
+        illiquid holdings outside a normal brokerage account.
+      </div>
+      <div class="complex-invest-toggle">
+        <button id="complex-invest-yes" class="theme-toggle-btn">Yes, I have these</button>
+        <button id="complex-invest-no" class="theme-toggle-btn">No, keep it simple</button>
+      </div>
+    </div>
   </section>
 
   <!-- ===================== DASHBOARD TAB — glance only, stops after trend ===================== -->
@@ -110,6 +129,10 @@
       <div class="hero-number" id="net-worth-value">—</div>
       <div class="hero-delta" id="net-worth-delta"></div>
     </section>
+
+    <div id="no-bank-banner" class="no-bank-banner hidden">
+      No bank account connected — <button id="no-bank-banner-btn" class="no-bank-banner-btn">tap to add one</button>
+    </div>
 
     <section class="score-section">
       <div class="section-label">Financial health score</div>
@@ -215,6 +238,9 @@
         </div>
         <select id="manual-category">
           <option value="real_estate">Real estate</option>
+          <option value="private_equity" class="advanced-category" hidden>Private equity</option>
+          <option value="venture" class="advanced-category" hidden>Venture / startup equity</option>
+          <option value="other_illiquid" class="advanced-category" hidden>Other illiquid investment</option>
           <option value="other">Other asset</option>
         </select>
         <button id="manual-submit-btn" class="book-call-btn manual-submit-btn">Add it</button>
