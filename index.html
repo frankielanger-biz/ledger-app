@@ -68,20 +68,16 @@
     <div class="resource-card">
       <div class="resource-card-title">What this is</div>
       <div class="resource-card-desc">
-        Ledger is a tool and platform to manage your finances through the lens of your net worth.
-        That includes all your assets, cash, investments, property, everything you own, weighed
-        against everything you owe. It's not a budgeting app. It's built around one idea: check
-        your real financial position before you decide, not after.
+        Ledger tracks your net worth — everything you own against everything you owe — so you can
+        check your real financial position before you make a decision, not after.
       </div>
     </div>
 
     <div class="resource-card">
       <div class="resource-card-title">Who it's for</div>
       <div class="resource-card-desc">
-        Anyone who wants a holistic view of their finances and to grow their financial literacy.
-        Ledger is meant to help you engage with your money in an empowering way, not an
-        overwhelming one, whether that's your first time really looking at your finances or
-        you've been tracking them for years.
+        Anyone who wants to manage their money holistically, whether this is your first time
+        looking at your finances or you've been tracking them for years.
       </div>
     </div>
 
@@ -102,6 +98,7 @@
       <div class="complex-invest-toggle">
         <button id="complex-invest-yes" class="theme-toggle-btn">Yes, I have these</button>
         <button id="complex-invest-no" class="theme-toggle-btn">No, keep it simple</button>
+        <button id="complex-invest-unsure" class="theme-toggle-btn">I don't know</button>
       </div>
     </div>
   </section>
@@ -203,14 +200,6 @@
         <div id="emergency-fund-bar" class="progress-bar-fill"></div>
       </div>
       <div id="emergency-fund-caption" class="mini-stat-caption"></div>
-    </section>
-
-    <section class="mini-stat-section">
-      <div class="section-label">Next milestone</div>
-      <div id="milestone-bar-wrap" class="progress-bar-wrap">
-        <div id="milestone-bar" class="progress-bar-fill milestone-fill"></div>
-      </div>
-      <div id="milestone-caption" class="mini-stat-caption"></div>
     </section>
 
     <p id="dashboard-status" class="dashboard-status"></p>
@@ -348,39 +337,33 @@
 
     <section class="goal-section">
       <span class="beta-pill beta-pill-standalone">BETA</span>
-      <div class="section-label">Goal net worth</div>
-      <div class="check-input-row">
-        <span class="dollar-sign">$</span>
-        <input type="number" id="goal-input" inputmode="decimal" placeholder="e.g. 1000000" />
-      </div>
+      <div class="section-label">Net worth forecast</div>
 
-      <div class="forecast-mini-inputs">
-        <div class="forecast-mini-field">
-          <label for="goal-years">Over next</label>
-          <input type="number" id="goal-years" inputmode="decimal" placeholder="5" value="5" />
-          <span>years</span>
-        </div>
-        <div class="forecast-mini-field">
-          <label for="user-age">Your age</label>
-          <input type="number" id="user-age" inputmode="decimal" placeholder="optional" />
+      <div class="forecast-input-row">
+        <label for="extra-savings-input">Extra savings/month</label>
+        <div class="check-input-row">
+          <span class="dollar-sign">$</span>
+          <input type="number" id="extra-savings-input" inputmode="decimal" placeholder="0" />
         </div>
       </div>
 
-      <div class="scenario-row">
-        <span class="scenario-label">Cut discretionary spending by:</span>
-        <select id="scenario-select">
-          <option value="0">No change</option>
-          <option value="25">25%</option>
-          <option value="50">50%</option>
-        </select>
+      <div class="forecast-input-row">
+        <label for="extra-investing-input">Extra investing/month</label>
+        <div class="check-input-row">
+          <span class="dollar-sign">$</span>
+          <input type="number" id="extra-investing-input" inputmode="decimal" placeholder="0" />
+        </div>
       </div>
 
-      <button id="forecast-plan-btn" class="forecast-btn">See my plan</button>
       <div id="goal-result" class="goal-result"></div>
 
       <div class="forecast-graph-block">
-        <div class="section-label">Net worth trajectory</div>
-        <canvas id="forecast-trajectory-canvas" width="600" height="140"></canvas>
+        <div class="section-label">Net worth trajectory (10-year projection)</div>
+        <canvas id="forecast-trajectory-canvas"></canvas>
+        <div class="forecast-legend">
+          <span><i class="legend-dot legend-dot-actual"></i>Current pace</span>
+          <span><i class="legend-dot legend-dot-adjusted"></i>With extra savings/investing</span>
+        </div>
       </div>
 
       <div class="forecast-graph-block">

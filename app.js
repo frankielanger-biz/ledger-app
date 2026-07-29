@@ -60,9 +60,8 @@ const spendingMonthSelectEl = document.getElementById("spending-month-select");
 const trendCanvasEl = document.getElementById("trend-canvas");
 const trendTooltipEl = document.getElementById("trend-tooltip");
 const trendAxisLabelsEl = document.getElementById("trend-axis-labels");
-const goalInputEl = document.getElementById("goal-input");
-const goalYearsEl = document.getElementById("goal-years");
-const userAgeEl = document.getElementById("user-age");
+const extraSavingsEl = document.getElementById("extra-savings-input");
+const extraInvestingEl = document.getElementById("extra-investing-input");
 const goalResultEl = document.getElementById("goal-result");
 const forecastTrajectoryCanvasEl = document.getElementById("forecast-trajectory-canvas");
 const forecastSpendingCanvasEl = document.getElementById("forecast-spending-canvas");
@@ -91,8 +90,6 @@ const ledgerBrandEl = document.querySelector(".topnav-brand");
 const percentileLineEl = document.getElementById("percentile-line");
 const emergencyFundBarEl = document.getElementById("emergency-fund-bar");
 const emergencyFundCaptionEl = document.getElementById("emergency-fund-caption");
-const milestoneBarEl = document.getElementById("milestone-bar");
-const milestoneCaptionEl = document.getElementById("milestone-caption");
 const subscriptionListEl = document.getElementById("subscription-list");
 const debtPayoffListEl = document.getElementById("debt-payoff-list");
 const debtPayoffSummaryEl = document.getElementById("debt-payoff-summary");
@@ -105,8 +102,6 @@ const watchlistSubmitBtnEl = document.getElementById("watchlist-submit-btn");
 const discreteToggleBtnEl = document.getElementById("discrete-toggle-btn");
 const eyeOpenIconEl = document.getElementById("eye-open-icon");
 const eyeClosedIconEl = document.getElementById("eye-closed-icon");
-const forecastPlanBtnEl = document.getElementById("forecast-plan-btn");
-const scenarioSelectEl = document.getElementById("scenario-select");
 const bookCallTopicEl = document.getElementById("book-call-topic");
 const bookCallBtnEl = document.getElementById("book-call-btn");
 const faqQuestionInputEl = document.getElementById("faq-question-input");
@@ -133,6 +128,15 @@ const BOOKING_EMAIL = "frankielanger@gmail.com";
 let latestBalances = null;
 let latestTransactions = null;
 let latestHistory = [];
+
+let trendResizeTimeout;
+window.addEventListener("resize", () => {
+  clearTimeout(trendResizeTimeout);
+  trendResizeTimeout = setTimeout(() => {
+    renderTrend(latestHistory);
+    if (latestBalances) updateForecast(latestBalances);
+  }, 150);
+});
 
 // Categories that count as "discretionary" for the afford-check comparison —
 // matches the same buckets get-transactions uses server-side, so the two
@@ -416,7 +420,6 @@ async function loadEverything() {
     renderGoal(balances);
     renderSettingsAccounts(balances);
     renderPercentile(balances);
-    renderMilestone(balances);
   } catch (err) {
     topbarStatusEl.textContent = "";
     dashboardStatus.textContent = `Couldn't load balances: ${err.message}`;
@@ -841,18 +844,34 @@ function renderSpendingBreakdown() {
 
 let trendPoints = []; // cached pixel positions for hit-testing on hover/touch
 
+function resizeTrendCanvas() {
+  const canvas = trendCanvasEl;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const cssWidth = rect.width || canvas.parentElement.clientWidth;
+  const cssHeight = 120;
+  canvas.width = Math.round(cssWidth * dpr);
+  canvas.height = Math.round(cssHeight * dpr);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { width: cssWidth, height: cssHeight };
+}
+
 function renderTrend(history) {
   const canvas = trendCanvasEl;
+  const { width, height } = resizeTrendCanvas();
   const ctx = canvas.getContext("2d");
-  const width = canvas.width;
-  const height = canvas.height;
   ctx.clearRect(0, 0, width, height);
   trendPoints = [];
 
   if (!history || history.length < 2) {
     ctx.font = "13px IBM Plex Mono, monospace";
     ctx.fillStyle = "#7C948A";
-    ctx.fillText("Not enough history yet. Check back after a few refreshes.", 10, height / 2);
+    ctx.textBaseline = "middle";
+    const msg = history && history.length === 1
+      ? "Building your trend — check back after a few days."
+      : "Not enough history yet.";
+    ctx.fillText(msg, 10, height / 2);
     trendAxisLabelsEl.innerHTML = "";
     return;
   }
@@ -902,8 +921,7 @@ function nearestTrendPoint(canvasX) {
 
 function showTrendTooltip(clientX) {
   const rect = trendCanvasEl.getBoundingClientRect();
-  const scaleX = trendCanvasEl.width / rect.width;
-  const canvasX = (clientX - rect.left) * scaleX;
+  const canvasX = clientX - rect.left;
   const point = nearestTrendPoint(canvasX);
   if (!point) return;
 
@@ -911,7 +929,7 @@ function showTrendTooltip(clientX) {
   const dateLabel = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   trendTooltipEl.textContent = `${dateLabel} · ${formatMoney(point.net_worth)}`;
-  trendTooltipEl.style.left = `${(point.x / trendCanvasEl.width) * rect.width}px`;
+  trendTooltipEl.style.left = `${point.x}px`;
   trendTooltipEl.classList.add("shown");
 }
 
@@ -938,196 +956,176 @@ trendCanvasEl.addEventListener(
 trendCanvasEl.addEventListener("touchend", hideTrendTooltip);
 
 // ---------------------------------------------------------------
-// Goal net worth — stored locally on this device (no backend field yet)
+// Net worth forecast — extra savings (flat) + extra investing
+// (compounds at a 7%/yr estimate), projected 10 years out
 // ---------------------------------------------------------------
 
+const FORECAST_YEARS = 10;
+const FORECAST_ANNUAL_RETURN = 0.07;
+
 function renderGoal(data) {
-  const savedGoal = localStorage.getItem("ledger_goal_net_worth");
-  if (savedGoal) goalInputEl.value = savedGoal;
-  updateGoalResult(data);
+  const savedSavings = localStorage.getItem("ledger_extra_savings");
+  const savedInvesting = localStorage.getItem("ledger_extra_investing");
+  if (savedSavings) extraSavingsEl.value = savedSavings;
+  if (savedInvesting) extraInvestingEl.value = savedInvesting;
+  updateForecast(data);
 }
 
-function updateGoalResult(data) {
-  const goal = parseFloat(goalInputEl.value);
-  if (isNaN(goal) || goal <= 0 || !data) {
+function updateForecast(data) {
+  if (!data) {
     goalResultEl.textContent = "";
     return;
   }
 
   const history = data.history ?? [];
+  const extraSavings = parseFloat(extraSavingsEl.value) || 0;
+  const extraInvesting = parseFloat(extraInvestingEl.value) || 0;
+
   if (history.length < 2) {
     goalResultEl.textContent = "Need a bit more history to project a timeline.";
+    renderSpendingGraph();
     return;
   }
 
   const first = history[0];
   const last = history[history.length - 1];
   const daysElapsed = (new Date(last.created_at) - new Date(first.created_at)) / (1000 * 60 * 60 * 24);
-  const growthPerDay = daysElapsed > 0 ? (last.net_worth - first.net_worth) / daysElapsed : 0;
+  const baseGrowthPerDay = daysElapsed > 0 ? (last.net_worth - first.net_worth) / daysElapsed : 0;
 
-  const remaining = goal - data.net_worth;
+  const months = FORECAST_YEARS * 12;
+  const monthlyRate = FORECAST_ANNUAL_RETURN / 12;
 
-  if (remaining <= 0) {
-    goalResultEl.textContent = "You've already hit this goal.";
-    return;
-  }
+  const baselineFinal = last.net_worth + baseGrowthPerDay * 365 * FORECAST_YEARS;
 
-  if (growthPerDay <= 0) {
-    goalResultEl.textContent = "At your current trend, you're not on pace to reach this. Growth has been flat or negative.";
-    return;
-  }
+  const flatSavingsTotal = extraSavings * months;
+  const investingFV =
+    extraInvesting > 0 ? extraInvesting * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate) : 0;
+  const adjustedFinal = baselineFinal + flatSavingsTotal + investingFV;
 
-  const daysToGoal = remaining / growthPerDay;
-  const yearsToGoal = daysToGoal / 365;
-  goalResultEl.textContent = `At your current pace, roughly ${yearsToGoal.toFixed(1)} years to reach ${formatMoney(goal)}.`;
-}
-
-goalInputEl.addEventListener("input", () => {
-  localStorage.setItem("ledger_goal_net_worth", goalInputEl.value);
-  updateGoalResult(latestBalances);
-});
-
-goalInputEl.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") showGoalPlan(latestBalances);
-});
-
-forecastPlanBtnEl.addEventListener("click", () => showGoalPlan(latestBalances));
-
-function showGoalPlan(data) {
-  const goal = parseFloat(goalInputEl.value);
-  if (isNaN(goal) || goal <= 0 || !data) {
-    goalResultEl.textContent = "Enter a goal amount first.";
-    return;
-  }
-
-  const remaining = goal - data.net_worth;
-  if (remaining <= 0) {
-    goalResultEl.textContent = "You've already hit this goal.";
-    return;
-  }
-
-  const scenarioPct = parseFloat(scenarioSelectEl.value) || 0;
-  const years = parseFloat(goalYearsEl.value) || 5;
-  const age = parseFloat(userAgeEl.value);
-
-  // Required monthly savings to hit the goal in the chosen window, assuming
-  // a 7%/yr return compounded monthly — the same annuity-payment math as a
-  // standard retirement calculator. A planning estimate, not a guarantee.
-  const monthlyRate = 0.07 / 12;
-  const months = years * 12;
-  const requiredMonthly = (remaining * monthlyRate) / (Math.pow(1 + monthlyRate, months) - 1);
-
-  const history = data.history ?? [];
-  let currentPaceLine = "";
-  let scenarioLine = "";
-  let baseGrowthPerDay = 0;
-  let adjustedGrowthPerDay = 0;
-
-  if (history.length >= 2) {
-    const first = history[0];
-    const last = history[history.length - 1];
-    const daysElapsed = (new Date(last.created_at) - new Date(first.created_at)) / (1000 * 60 * 60 * 24);
-    baseGrowthPerDay = daysElapsed > 0 ? (last.net_worth - first.net_worth) / daysElapsed : 0;
-    adjustedGrowthPerDay = baseGrowthPerDay;
-
-    if (baseGrowthPerDay <= 0 && scenarioPct === 0) {
-      currentPaceLine = "At your current trend, growth has been flat or negative.";
-    } else {
-      const yearsToGoal = remaining / baseGrowthPerDay / 365;
-      currentPaceLine = baseGrowthPerDay > 0 ? `At your current pace: ~${yearsToGoal.toFixed(1)} years.` : "At your current trend, growth has been flat or negative.";
-    }
-
-    if (scenarioPct > 0 && latestTransactions?.discretionary_spend_30d) {
-      const extraMonthly = latestTransactions.discretionary_spend_30d * (scenarioPct / 100);
-      const extraDaily = extraMonthly / 30;
-      adjustedGrowthPerDay = baseGrowthPerDay + extraDaily;
-      if (adjustedGrowthPerDay > 0) {
-        const adjustedYears = remaining / adjustedGrowthPerDay / 365;
-        scenarioLine = `<p>Cutting discretionary spending ${scenarioPct}%: ~${adjustedYears.toFixed(1)} years (adds ~${formatMoney(extraMonthly)}/month).</p>`;
-      }
-    }
-  }
-
-  const ageLine = !isNaN(age) && age > 0 ? `<p>You'd be about age ${Math.round(age + years)} in ${years} years.</p>` : "";
+  const hasExtra = extraSavings > 0 || extraInvesting > 0;
 
   goalResultEl.innerHTML = `
-    <p><strong>Here's your plan:</strong></p>
-    <p>${currentPaceLine}</p>
-    ${scenarioLine}
-    ${ageLine}
-    <p>To hit this in ${years} year${years == 1 ? "" : "s"} at a 7%/yr estimate: save ~${formatMoney(requiredMonthly)}/month.</p>
-    <p class="beta-disclaimer">Forecast is in beta, a planning estimate, not a guarantee.</p>
+    <p>At your current pace: ~${formatMoney(baselineFinal)} in ${FORECAST_YEARS} years.</p>
+    ${
+      hasExtra
+        ? `<p>With ${extraSavings > 0 ? `${formatMoney(extraSavings)}/mo extra savings` : ""}${
+            extraSavings > 0 && extraInvesting > 0 ? " + " : ""
+          }${extraInvesting > 0 ? `${formatMoney(extraInvesting)}/mo extra investing` : ""}: ~${formatMoney(
+            adjustedFinal
+          )} in ${FORECAST_YEARS} years (+${formatMoney(adjustedFinal - baselineFinal)}).</p>`
+        : ""
+    }
+    <p class="beta-disclaimer">Forecast is in beta, a planning estimate using a 7%/yr market-average assumption for the investing portion, not a guarantee.</p>
   `;
 
-  renderTrajectoryGraph(data, years, adjustedGrowthPerDay || baseGrowthPerDay, goal);
+  renderTrajectoryGraph(data, baseGrowthPerDay, extraSavings, extraInvesting);
   renderSpendingGraph();
 }
 
+extraSavingsEl.addEventListener("input", () => {
+  localStorage.setItem("ledger_extra_savings", extraSavingsEl.value);
+  updateForecast(latestBalances);
+});
+
+extraInvestingEl.addEventListener("input", () => {
+  localStorage.setItem("ledger_extra_investing", extraInvestingEl.value);
+  updateForecast(latestBalances);
+});
+
 // ---------------------------------------------------------------
-// Net worth trajectory graph — historical line + projected continuation
+// Net worth trajectory graph — historical line + two projected
+// curves (current pace vs. with extra savings/investing)
 // ---------------------------------------------------------------
 
-function renderTrajectoryGraph(data, years, dailyGrowthRate, goal) {
+function renderTrajectoryGraph(data, baseGrowthPerDay, extraSavings, extraInvesting) {
   const canvas = forecastTrajectoryCanvasEl;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const width = rect.width || canvas.parentElement.clientWidth;
+  const height = 150;
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
   const ctx = canvas.getContext("2d");
-  const width = canvas.width;
-  const height = canvas.height;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, width, height);
 
   const history = data.history ?? [];
   if (history.length < 2) {
     ctx.font = "13px Manrope, sans-serif";
     ctx.fillStyle = "#7C948A";
+    ctx.textBaseline = "middle";
     ctx.fillText("Need a bit more history to project this.", 10, height / 2);
     return;
   }
 
-  const projectedDays = years * 365;
+  const months = FORECAST_YEARS * 12;
+  const monthlyRate = FORECAST_ANNUAL_RETURN / 12;
+  const monthlyBaseGrowth = baseGrowthPerDay * 30.44;
   const lastPoint = history[history.length - 1];
-  const projectedFinalValue = lastPoint.net_worth + dailyGrowthRate * projectedDays;
 
-  const allValues = [...history.map((h) => h.net_worth), projectedFinalValue, goal];
+  // Build monthly projected points for both curves.
+  const baselineSeries = [];
+  const adjustedSeries = [];
+  let investingBalance = 0;
+  for (let m = 0; m <= months; m++) {
+    const baseline = lastPoint.net_worth + monthlyBaseGrowth * m;
+    investingBalance = m === 0 ? 0 : investingBalance * (1 + monthlyRate) + extraInvesting;
+    const adjusted = baseline + extraSavings * m + investingBalance;
+    baselineSeries.push(baseline);
+    adjustedSeries.push(adjusted);
+  }
+
+  const hasExtra = extraSavings > 0 || extraInvesting > 0;
+  const allValues = [...history.map((h) => h.net_worth), ...baselineSeries, ...(hasExtra ? adjustedSeries : [])];
   const min = Math.min(...allValues);
   const max = Math.max(...allValues);
   const range = max - min || 1;
   const padding = 10;
-  const totalPoints = history.length + 1; // +1 for the projected endpoint
+  const totalUnits = history.length - 1 + months;
 
-  const xFor = (i) => padding + (i / (totalPoints - 1)) * (width - padding * 2);
+  const xForHistory = (i) => padding + (i / totalUnits) * (width - padding * 2);
+  const xForMonth = (m) => padding + ((history.length - 1 + m) / totalUnits) * (width - padding * 2);
   const yFor = (v) => height - padding - ((v - min) / range) * (height - padding * 2);
 
-  // Historical line (solid)
+  // Historical line (solid, real data)
   ctx.beginPath();
   ctx.strokeStyle = "#00D9A3";
   ctx.lineWidth = 2;
   history.forEach((point, i) => {
-    const x = xFor(i);
+    const x = xForHistory(i);
     const y = yFor(point.net_worth);
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   });
   ctx.stroke();
 
-  // Projected line (dashed) from the last real point to the projected point
+  // Baseline projection (dashed, current pace)
   ctx.beginPath();
   ctx.setLineDash([5, 5]);
   ctx.strokeStyle = "#7C948A";
   ctx.lineWidth = 2;
-  ctx.moveTo(xFor(history.length - 1), yFor(lastPoint.net_worth));
-  ctx.lineTo(xFor(history.length), yFor(projectedFinalValue));
+  baselineSeries.forEach((v, m) => {
+    const x = xForMonth(m);
+    const y = yFor(v);
+    if (m === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // Goal line (horizontal reference)
-  const goalY = yFor(goal);
-  ctx.beginPath();
-  ctx.strokeStyle = "#D9A24F";
-  ctx.lineWidth = 1;
-  ctx.setLineDash([2, 4]);
-  ctx.moveTo(padding, goalY);
-  ctx.lineTo(width - padding, goalY);
-  ctx.stroke();
-  ctx.setLineDash([]);
+  // Adjusted projection (solid, with extra savings/investing)
+  if (hasExtra) {
+    ctx.beginPath();
+    ctx.strokeStyle = "#D9A24F";
+    ctx.lineWidth = 2;
+    adjustedSeries.forEach((v, m) => {
+      const x = xForMonth(m);
+      const y = yFor(v);
+      if (m === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
 }
 
 // ---------------------------------------------------------------
@@ -1435,28 +1433,6 @@ function renderPercentile(data) {
 }
 
 // ---------------------------------------------------------------
-// Net worth milestones — next round-number target above current net worth
-// ---------------------------------------------------------------
-
-function nextMilestone(netWorth) {
-  const steps = [10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2000000, 5000000, 10000000];
-  for (const step of steps) {
-    if (netWorth < step) return step;
-  }
-  // Beyond $10M, just round up to the next $5M.
-  return Math.ceil((netWorth + 1) / 5000000) * 5000000;
-}
-
-function renderMilestone(data) {
-  const milestone = nextMilestone(data.net_worth);
-  const prevMilestoneIdx = [0, 10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2000000, 5000000].filter((s) => s < milestone).pop() ?? 0;
-  const pct = clamp(((data.net_worth - prevMilestoneIdx) / (milestone - prevMilestoneIdx)) * 100, 0, 100);
-
-  milestoneBarEl.style.width = `${pct}%`;
-  milestoneCaptionEl.textContent = `${formatMoney(milestone - data.net_worth)} to $${milestone.toLocaleString()}`;
-}
-
-// ---------------------------------------------------------------
 // Emergency fund tracker — runway vs. a standard 6-month benchmark
 // ---------------------------------------------------------------
 
@@ -1658,6 +1634,12 @@ document.getElementById("complex-invest-yes")?.addEventListener("click", () => {
 document.getElementById("complex-invest-no")?.addEventListener("click", () => {
   localStorage.setItem("ledger_has_complex_investments", "false");
   applyComplexInvestState();
+});
+
+document.getElementById("complex-invest-unsure")?.addEventListener("click", () => {
+  localStorage.setItem("ledger_has_complex_investments", "false");
+  applyComplexInvestState();
+  showToast("Kept it simple — you can change this anytime");
 });
 
 applyComplexInvestState();
@@ -1882,6 +1864,8 @@ authFormEl.addEventListener("submit", async (e) => {
 function showAuthScreen() {
   authScreenEl.classList.remove("hidden");
   appRootEl.classList.add("hidden");
+  tabButtons.forEach((b) => b.classList.toggle("active", b.dataset.tab === "dashboard"));
+  tabPanels.forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== "dashboard"));
 }
 
 function showApp() {

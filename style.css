@@ -427,13 +427,16 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
 
 .complex-invest-toggle {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 12px;
 }
 
 .complex-invest-toggle .theme-toggle-btn {
-  flex: 1;
-  padding: 10px 12px;
+  flex: 1 1 auto;
+  min-width: 100px;
+  padding: 10px 10px;
+  font-size: 13px;
 }
 
 .hero-label {
@@ -1088,8 +1091,10 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
 
 .page-panel {
   max-width: 480px;
+  width: 100%;
   margin: 0 auto;
   padding: 24px 20px 40px;
+  overflow-x: hidden;
 }
 
 .page-header {
@@ -1164,50 +1169,22 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
   border-radius: 10px;
 }
 
-.scenario-row {
+.forecast-input-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 12px;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.forecast-input-row label {
   font-size: 14px;
   color: var(--ink-dim);
+  text-align: left;
 }
 
-.forecast-mini-inputs {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 12px;
-}
-
-.forecast-mini-field {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.forecast-mini-field label {
-  font-size: 13px;
-  color: var(--ink-dim);
-}
-
-.forecast-mini-field input {
-  width: 90px;
-  background: var(--bg-raised);
-  border: 1px solid var(--hairline);
-  border-radius: 6px;
-  padding: 8px 6px;
-  color: var(--ink);
-  font-family: var(--font-mono);
-  font-size: 15px;
-  text-align: center;
-}
-
-.forecast-mini-field span {
-  font-size: 13px;
-  color: var(--ink-dim);
+.forecast-input-row .check-input-row {
+  width: 140px;
 }
 
 .forecast-graph-block {
@@ -1222,14 +1199,37 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
   display: block;
 }
 
-.scenario-row select {
-  background: var(--bg-raised);
-  border: 1px solid var(--hairline);
-  border-radius: 6px;
-  padding: 6px 10px;
-  color: var(--ink);
-  font-family: var(--font-sans);
-  font-size: 14px;
+#forecast-trajectory-canvas {
+  height: 150px;
+}
+
+.forecast-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+
+.forecast-legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.legend-dot-actual {
+  background: #7C948A;
+}
+
+.legend-dot-adjusted {
+  background: #D9A24F;
 }
 
 .settings-field {
@@ -1241,7 +1241,7 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
 }
 
 .settings-section-label {
-  font-size: 14px;
+  font-size: 12px;
   color: var(--ink-dim);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1292,9 +1292,9 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--hairline);
-  font-size: 15px;
+  font-size: 13px;
   text-align: left;
 }
 
@@ -1337,7 +1337,7 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
 }
 
 .settings-field label {
-  font-size: 14px;
+  font-size: 12px;
   color: var(--ink-dim);
 }
 
@@ -1345,11 +1345,17 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
   background: var(--bg-raised);
   border: 1px solid var(--hairline);
   border-radius: 8px;
-  padding: 10px 14px;
+  padding: 8px 12px;
   color: var(--ink);
   font-family: var(--font-sans);
-  font-size: 15px;
+  font-size: 13px;
   width: 100%;
+  min-width: 0;
+}
+
+.settings-field input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .settings-field-row {
@@ -1463,10 +1469,6 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
   border-radius: 6px 0 0 6px;
   transition: width 0.6s ease;
   width: 0%;
-}
-
-.milestone-fill {
-  background: #D9A24F;
 }
 
 .mini-stat-caption {
