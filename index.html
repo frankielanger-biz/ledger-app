@@ -39,9 +39,11 @@
   <div id="toast-container"></div>
   <div id="tab-intro-overlay" class="tab-intro-overlay hidden">
     <div class="tab-intro-card">
+      <div id="tab-intro-step" class="tab-intro-step"></div>
       <div class="tab-intro-title" id="tab-intro-title"></div>
       <div class="tab-intro-text" id="tab-intro-text"></div>
       <button id="tab-intro-dismiss" class="book-call-btn tab-intro-dismiss">Got it</button>
+      <button id="tab-intro-skip" class="tab-intro-skip">Skip walkthrough</button>
     </div>
   </div>
   <div id="app-root" class="hidden">
@@ -87,6 +89,17 @@
         Head to the Manage tab and connect a bank (Chase for now, more coming). Your dashboard
         fills in automatically from there.
       </div>
+    </div>
+
+    <div class="resource-card walkthrough-card">
+      <div class="resource-card-title">Want a walkthrough?</div>
+      <div class="resource-card-desc">
+        We'll take you through each tab, one at a time, so you know what's where.
+      </div>
+      <button id="start-walkthrough-btn" class="book-call-btn walkthrough-start-btn">
+        Take the walkthrough
+        <span class="swipe-arrow">→</span>
+      </button>
     </div>
 
     <div class="resource-card">

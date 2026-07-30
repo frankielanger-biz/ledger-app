@@ -425,6 +425,49 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
   width: 100%;
 }
 
+.tab-intro-step {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  margin-bottom: 6px;
+  letter-spacing: 0.05em;
+}
+
+.tab-intro-skip {
+  background: none;
+  border: none;
+  color: var(--ink-dim);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 10px 0 0;
+  width: 100%;
+  box-shadow: none;
+}
+
+.walkthrough-card {
+  border-color: var(--accent);
+}
+
+.walkthrough-start-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.swipe-arrow {
+  display: inline-block;
+  animation: swipe-nudge 1.2s ease-in-out infinite;
+}
+
+@keyframes swipe-nudge {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(6px); }
+}
+
 .complex-invest-toggle {
   display: flex;
   flex-wrap: wrap;
@@ -475,6 +518,7 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
 
 .score-flip-container {
   perspective: 1200px;
+  overflow: hidden;
 }
 
 .score-flip-inner {

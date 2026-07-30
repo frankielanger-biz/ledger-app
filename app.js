@@ -193,23 +193,62 @@ const tabIntroOverlayEl = document.getElementById("tab-intro-overlay");
 const tabIntroTitleEl = document.getElementById("tab-intro-title");
 const tabIntroTextEl = document.getElementById("tab-intro-text");
 const tabIntroDismissEl = document.getElementById("tab-intro-dismiss");
+const tabIntroSkipEl = document.getElementById("tab-intro-skip");
+const tabIntroStepEl = document.getElementById("tab-intro-step");
 
-function maybeShowTabIntro(tabName) {
+const WALKTHROUGH_ORDER = [
+  "dashboard",
+  "manage",
+  "forecast",
+  "book-call",
+  "faq",
+  "resources",
+  "settings",
+  "beta",
+];
+
+let walkthroughActive = false;
+let walkthroughStep = 0;
+
+function startWalkthrough() {
+  walkthroughActive = true;
+  walkthroughStep = 0;
+  document.querySelector(`.topnav-tab[data-tab="${WALKTHROUGH_ORDER[0]}"]`).click();
+}
+
+function showWalkthroughStep(tabName) {
   const intro = TAB_INTROS[tabName];
   if (!intro) return;
-  const seenKey = `ledger_seen_tab_${tabName}`;
-  if (localStorage.getItem(seenKey) === "true") return;
+
+  const stepIndex = WALKTHROUGH_ORDER.indexOf(tabName);
+  const isLast = stepIndex === WALKTHROUGH_ORDER.length - 1;
 
   tabIntroTitleEl.textContent = intro.title;
   tabIntroTextEl.textContent = intro.text;
+  tabIntroStepEl.textContent = `${stepIndex + 1} of ${WALKTHROUGH_ORDER.length}`;
+  tabIntroDismissEl.textContent = isLast ? "Done" : "Next  →";
   tabIntroOverlayEl.classList.remove("hidden");
+  tabIntroOverlayEl.classList.add("walkthrough-mode");
 
-  const dismiss = () => {
-    localStorage.setItem(seenKey, "true");
-    tabIntroOverlayEl.classList.add("hidden");
+  tabIntroDismissEl.onclick = () => {
+    if (isLast) {
+      endWalkthrough();
+      return;
+    }
+    walkthroughStep = stepIndex + 1;
+    document.querySelector(`.topnav-tab[data-tab="${WALKTHROUGH_ORDER[walkthroughStep]}"]`).click();
   };
-  tabIntroDismissEl.onclick = dismiss;
 }
+
+function endWalkthrough() {
+  walkthroughActive = false;
+  tabIntroOverlayEl.classList.add("hidden");
+  tabIntroOverlayEl.classList.remove("walkthrough-mode");
+}
+
+tabIntroSkipEl.addEventListener("click", endWalkthrough);
+
+document.getElementById("start-walkthrough-btn")?.addEventListener("click", startWalkthrough);
 
 tabButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -217,7 +256,7 @@ tabButtons.forEach((btn) => {
     tabButtons.forEach((b) => b.classList.toggle("active", b === btn));
     tabPanels.forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== target));
     btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-    maybeShowTabIntro(target);
+    if (walkthroughActive) showWalkthroughStep(target);
   });
 });
 
@@ -1910,8 +1949,6 @@ function showApp() {
     } else if (justSignedUp) {
       document.querySelector('.topnav-tab[data-tab="getting-started"]').click();
       justSignedUp = false;
-    } else {
-      maybeShowTabIntro("dashboard");
     }
     loadEverything();
   }
