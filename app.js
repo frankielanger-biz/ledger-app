@@ -365,29 +365,37 @@ async function callFunction(name, body) {
 // Plaid Link — connect a new bank account
 // ---------------------------------------------------------------
 
+async function handlePlaidSuccess(public_token, metadata) {
+  dashboardStatus.textContent = "Connecting…";
+  try {
+    await callFunction("exchange-public-token", {
+      public_token,
+      institution_name: metadata.institution?.name,
+      institution_id: metadata.institution?.institution_id,
+    });
+    dashboardStatus.textContent = "";
+    showToast(`${metadata.institution?.name ?? "Bank"} connected`);
+    await loadEverything();
+  } catch (err) {
+    dashboardStatus.textContent = `Couldn't finish connecting: ${err.message}`;
+  }
+}
+
 connectBtn.addEventListener("click", async () => {
   connectBtn.disabled = true;
   connectBtn.textContent = "Loading…";
 
   try {
     const { link_token } = await callFunction("create-link-token");
+    // Chase (and other OAuth institutions) redirect out to a real bank login
+    // page, then bounce back to this same URL. We need the exact same
+    // link_token to resume that session, so it has to survive the redirect —
+    // sessionStorage does that; a normal JS variable would not.
+    sessionStorage.setItem("ledger_plaid_link_token", link_token);
 
     const handler = Plaid.create({
       token: link_token,
-      onSuccess: async (public_token, metadata) => {
-        dashboardStatus.textContent = "Connecting…";
-        try {
-          await callFunction("exchange-public-token", {
-            public_token,
-            institution_name: metadata.institution?.name,
-            institution_id: metadata.institution?.institution_id,
-          });
-          dashboardStatus.textContent = "";
-          await loadEverything();
-        } catch (err) {
-          dashboardStatus.textContent = `Couldn't finish connecting: ${err.message}`;
-        }
-      },
+      onSuccess: handlePlaidSuccess,
       onExit: (err) => {
         if (err) console.error("Plaid Link exited with error:", err);
       },
@@ -401,6 +409,30 @@ connectBtn.addEventListener("click", async () => {
     connectBtn.textContent = "+ Connect a bank";
   }
 });
+
+// If we're coming back from a Chase-style OAuth redirect, the URL will carry
+// an oauth_state_id param. Resume the exact same Link session using the
+// token we stashed before leaving, rather than starting a new one.
+function maybeResumePlaidOAuth() {
+  if (!window.location.href.includes("oauth_state_id=")) return;
+  const savedToken = sessionStorage.getItem("ledger_plaid_link_token");
+  if (!savedToken) return;
+
+  dashboardStatus.textContent = "Finishing bank connection…";
+  const handler = Plaid.create({
+    token: savedToken,
+    receivedRedirectUri: window.location.href,
+    onSuccess: handlePlaidSuccess,
+    onExit: (err) => {
+      if (err) console.error("Plaid Link (OAuth resume) exited with error:", err);
+      dashboardStatus.textContent = "";
+    },
+  });
+  handler.open();
+  sessionStorage.removeItem("ledger_plaid_link_token");
+  // Clean the URL so a later refresh doesn't try to resume this again.
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
 
 // ---------------------------------------------------------------
 // Loading data — balances + transactions, then render everything
@@ -1873,7 +1905,9 @@ function showApp() {
   appRootEl.classList.remove("hidden");
   if (!appHasBooted) {
     appHasBooted = true;
-    if (justSignedUp) {
+    if (window.location.href.includes("oauth_state_id=")) {
+      maybeResumePlaidOAuth();
+    } else if (justSignedUp) {
       document.querySelector('.topnav-tab[data-tab="getting-started"]').click();
       justSignedUp = false;
     } else {
