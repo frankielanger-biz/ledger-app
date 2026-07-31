@@ -46,6 +46,18 @@
       <button id="tab-intro-skip" class="tab-intro-skip">Skip walkthrough</button>
     </div>
   </div>
+
+  <div id="empty-state-overlay" class="tab-intro-overlay hidden">
+    <div class="tab-intro-card">
+      <div class="tab-intro-title">Let's get your numbers in</div>
+      <div class="tab-intro-text">
+        Ledger tracks your net worth by pulling in your real bank balances. Connect a bank now to
+        see it fill in, or skip for now and look around first.
+      </div>
+      <button id="empty-state-connect-btn" class="book-call-btn tab-intro-dismiss">Connect a bank</button>
+      <button id="empty-state-skip-btn" class="tab-intro-skip">Skip for now</button>
+    </div>
+  </div>
   <div id="app-root" class="hidden">
 
   <nav class="topnav">
@@ -54,6 +66,7 @@
       <button class="topnav-tab" data-tab="getting-started">Getting Started</button>
       <button class="topnav-tab active" data-tab="dashboard">Dashboard</button>
       <button class="topnav-tab" data-tab="manage">Manage</button>
+      <button class="topnav-tab" data-tab="discretionary">Discretionary</button>
       <button class="topnav-tab" data-tab="forecast">Forecast</button>
       <button class="topnav-tab" data-tab="book-call">Book a call</button>
       <button class="topnav-tab" data-tab="faq">FAQ</button>
@@ -68,18 +81,20 @@
   <!-- ===================== GETTING STARTED TAB ===================== -->
   <section class="page-panel tab-panel hidden" data-panel="getting-started">
     <div class="resource-card">
-      <div class="resource-card-title">What this is</div>
-      <div class="resource-card-desc">
-        Ledger tracks your net worth — everything you own against everything you owe — so you can
-        check your real financial position before you make a decision, not after.
-      </div>
-    </div>
-
-    <div class="resource-card">
       <div class="resource-card-title">Who it's for</div>
       <div class="resource-card-desc">
         Anyone who wants to manage their money holistically, whether this is your first time
         looking at your finances or you've been tracking them for years.
+      </div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">What this is</div>
+      <div class="resource-card-desc">
+        Ledger is a holistic finance and financial literacy platform. It tracks your net worth,
+        everything you own against everything you owe, so you can check your real financial
+        position before you make a decision, not after. The goal is to help you spend, save, and
+        make money better.
       </div>
     </div>
 
@@ -110,7 +125,7 @@
       </div>
       <div class="complex-invest-toggle">
         <button id="complex-invest-yes" class="theme-toggle-btn">Yes, I have these</button>
-        <button id="complex-invest-no" class="theme-toggle-btn">No, keep it simple</button>
+        <button id="complex-invest-no" class="theme-toggle-btn">No</button>
         <button id="complex-invest-unsure" class="theme-toggle-btn">I don't know</button>
       </div>
     </div>
@@ -134,15 +149,16 @@
       <button id="refresh-btn" class="icon-btn" title="Refresh">↻</button>
     </header>
 
+    <div id="attention-banner" class="attention-banner hidden">
+      <span id="attention-banner-text">Attention needed</span>
+      <button id="attention-banner-btn" class="attention-banner-btn">Update settings</button>
+    </div>
+
     <section class="hero">
       <div class="hero-label">Net worth</div>
       <div class="hero-number" id="net-worth-value">—</div>
       <div class="hero-delta" id="net-worth-delta"></div>
     </section>
-
-    <div id="no-bank-banner" class="no-bank-banner hidden">
-      No bank account connected — <button id="no-bank-banner-btn" class="no-bank-banner-btn">tap to add one</button>
-    </div>
 
     <section class="score-section">
       <div class="section-label">Financial health score</div>
@@ -250,25 +266,6 @@
       </div>
     </section>
 
-    <section class="check-block">
-      <div class="check-label">New purchase impact</div>
-      <div class="check-input-row">
-        <span class="dollar-sign">$</span>
-        <input type="number" id="afford-input" inputmode="decimal" placeholder="0" />
-      </div>
-      <select id="afford-category" class="afford-category-select">
-        <option value="">What kind of spend is this?</option>
-        <option value="housing">Housing</option>
-        <option value="utilities">Utilities</option>
-        <option value="subscription">Subscription</option>
-        <option value="discretionary">General discretionary</option>
-        <option value="need">General need</option>
-        <option value="investment">Investment</option>
-        <option value="other">Other</option>
-      </select>
-      <div id="afford-result" class="afford-result"></div>
-    </section>
-
     <section class="invest-section">
       <div class="section-label">What if I invested this instead?</div>
 
@@ -317,16 +314,34 @@
       </div>
     </section>
 
-    <section class="subscription-section">
-      <div class="section-label">Subscription audit</div>
-      <div class="mini-stat-caption">Merchants that charged you 2+ times in the last 90 days.</div>
-      <div id="subscription-list" class="subscription-list"></div>
-    </section>
-
     <section class="debt-payoff-section">
       <div class="section-label">Debt payoff comparison</div>
       <div id="debt-payoff-list" class="debt-payoff-list"></div>
       <div id="debt-payoff-summary" class="mini-stat-caption"></div>
+    </section>
+
+  </section>
+
+  <!-- ===================== DISCRETIONARY TAB ===================== -->
+  <section class="screen tab-panel hidden" data-panel="discretionary">
+
+    <section class="check-block">
+      <div class="check-label">New purchase impact</div>
+      <div class="check-input-row">
+        <span class="dollar-sign">$</span>
+        <input type="number" id="afford-input" inputmode="decimal" placeholder="0" />
+      </div>
+      <select id="afford-category" class="afford-category-select">
+        <option value="">What kind of spend is this?</option>
+        <option value="housing">Housing</option>
+        <option value="utilities">Utilities</option>
+        <option value="subscription">Subscription</option>
+        <option value="discretionary">General discretionary</option>
+        <option value="need">General need</option>
+        <option value="investment">Investment</option>
+        <option value="other">Other</option>
+      </select>
+      <div id="afford-result" class="afford-result"></div>
     </section>
 
     <section class="watchlist-section">
@@ -343,6 +358,12 @@
       </div>
     </section>
 
+    <section class="subscription-section">
+      <div class="section-label">Subscription audit</div>
+      <div class="mini-stat-caption">Merchants that charged you 2+ times in the last 90 days.</div>
+      <div id="subscription-list" class="subscription-list"></div>
+    </section>
+
   </section>
 
   <!-- ===================== FORECAST TAB ===================== -->
@@ -350,10 +371,23 @@
 
     <section class="goal-section">
       <span class="beta-pill beta-pill-standalone">BETA</span>
-      <div class="section-label">Net worth forecast</div>
+      <div class="forecast-header-row">
+        <div class="section-label">Net worth forecast</div>
+        <div class="forecast-current-stat">
+          Current net worth <strong id="forecast-current-net-worth">—</strong>
+        </div>
+      </div>
 
       <div class="forecast-input-row">
-        <label for="extra-savings-input">Extra savings/month</label>
+        <label for="goal-net-worth-input">Goal net worth</label>
+        <div class="check-input-row">
+          <span class="dollar-sign">$</span>
+          <input type="number" id="goal-net-worth-input" inputmode="decimal" placeholder="e.g. 1,000,000" />
+        </div>
+      </div>
+
+      <div class="forecast-input-row">
+        <label for="extra-savings-input">How much are you willing to save per month?</label>
         <div class="check-input-row">
           <span class="dollar-sign">$</span>
           <input type="number" id="extra-savings-input" inputmode="decimal" placeholder="0" />
@@ -361,7 +395,7 @@
       </div>
 
       <div class="forecast-input-row">
-        <label for="extra-investing-input">Extra investing/month</label>
+        <label for="extra-investing-input">How much are you willing to invest per month?</label>
         <div class="check-input-row">
           <span class="dollar-sign">$</span>
           <input type="number" id="extra-investing-input" inputmode="decimal" placeholder="0" />
@@ -374,8 +408,8 @@
         <div class="section-label">Net worth trajectory (10-year projection)</div>
         <canvas id="forecast-trajectory-canvas"></canvas>
         <div class="forecast-legend">
-          <span><i class="legend-dot legend-dot-actual"></i>Current pace</span>
-          <span><i class="legend-dot legend-dot-adjusted"></i>With extra savings/investing</span>
+          <span><i class="legend-dot legend-dot-actual"></i>What you're doing now</span>
+          <span><i class="legend-dot legend-dot-adjusted"></i>Your intended net worth</span>
         </div>
       </div>
 
@@ -461,6 +495,8 @@
 
   <!-- ===================== RESOURCES TAB (education content lives here) ===================== -->
   <section class="page-panel tab-panel hidden" data-panel="resources">
+    <div class="resource-bucket-label">Equities and investments</div>
+
     <div class="resource-card">
       <div class="resource-card-title">What's a stock?</div>
       <div class="resource-card-desc">
@@ -514,6 +550,17 @@
     </div>
 
     <div class="resource-card">
+      <div class="resource-card-title">Historical "what if I'd invested" charts</div>
+      <div class="resource-card-desc">
+        Under construction. Showing real historical performance (e.g., "$1,000 in NVIDIA 5 years
+        ago") needs a paid historical-data source we haven't added yet. The ticker lookup in Manage
+        shows today's real price in the meantime.
+      </div>
+    </div>
+
+    <div class="resource-bucket-label">Understanding your numbers</div>
+
+    <div class="resource-card">
       <div class="resource-card-title">Understanding your runway</div>
       <div class="resource-card-desc">
         Runway is how many months your liquid cash would last if you stopped earning today,
@@ -538,14 +585,7 @@
       </div>
     </div>
 
-    <div class="resource-card">
-      <div class="resource-card-title">Historical "what if I'd invested" charts</div>
-      <div class="resource-card-desc">
-        Under construction. Showing real historical performance (e.g., "$1,000 in NVIDIA 5 years
-        ago") needs a paid historical-data source we haven't added yet. The ticker lookup in Manage
-        shows today's real price in the meantime.
-      </div>
-    </div>
+    <div class="resource-bucket-label">Insurance and estate</div>
 
     <div class="resource-card">
       <div class="resource-card-title">Insurance and estate checklist</div>
@@ -622,10 +662,6 @@
         <span>Purchase alerts</span>
         <span class="coming-soon-pill">Coming soon</span>
       </div>
-      <div class="notification-row">
-        <span>Monthly digest</span>
-        <span class="coming-soon-pill">Coming soon</span>
-      </div>
     </div>
 
     <div class="settings-divider"></div>
@@ -636,6 +672,9 @@
     <div class="settings-divider"></div>
 
     <div class="settings-section-label">Invite friends</div>
+    <div class="resource-card-desc" style="margin-bottom: 12px;">
+      Invite a friend. When they sign up, you get 3 months free.
+    </div>
     <button id="invite-friends-btn" class="connect-btn">Share Ledger</button>
     <div id="invite-status" class="dashboard-status"></div>
 

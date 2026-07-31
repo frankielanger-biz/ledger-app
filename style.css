@@ -361,18 +361,23 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
   text-align: center;
 }
 
-.no-bank-banner {
+.attention-banner {
   background: rgba(0, 217, 163, 0.1);
   border: 1px solid var(--accent);
   border-radius: 10px;
   padding: 12px 16px;
-  margin: 16px 0 0;
+  margin: 0 0 16px;
   font-size: 14px;
   text-align: center;
   color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.no-bank-banner-btn {
+.attention-banner-btn {
   background: none;
   border: none;
   color: var(--accent);
@@ -527,7 +532,7 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
 
 .hero-number {
   font-family: var(--font-mono);
-  font-size: 53px;
+  font-size: 58px;
   font-weight: 500;
   margin-top: 8px;
   letter-spacing: -0.01em;
@@ -929,6 +934,28 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
   padding: 20px 0;
   border-bottom: 1px solid var(--hairline);
   text-align: center;
+}
+
+.forecast-header-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  text-align: left;
+  margin-bottom: 12px;
+}
+
+.forecast-current-stat {
+  font-size: 12px;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+
+.forecast-current-stat strong {
+  font-family: var(--font-mono);
+  color: var(--ink);
+  font-weight: 600;
 }
 
 #ticker-input {
@@ -1673,6 +1700,19 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 12px;
+}
+
+.resource-bucket-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin: 28px 0 8px;
+}
+
+.resource-bucket-label:first-child {
+  margin-top: 0;
 }
 
 .resource-card-title {

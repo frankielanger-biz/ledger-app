@@ -62,6 +62,8 @@ const trendTooltipEl = document.getElementById("trend-tooltip");
 const trendAxisLabelsEl = document.getElementById("trend-axis-labels");
 const extraSavingsEl = document.getElementById("extra-savings-input");
 const extraInvestingEl = document.getElementById("extra-investing-input");
+const goalNetWorthEl = document.getElementById("goal-net-worth-input");
+const forecastCurrentNetWorthEl = document.getElementById("forecast-current-net-worth");
 const goalResultEl = document.getElementById("goal-result");
 const forecastTrajectoryCanvasEl = document.getElementById("forecast-trajectory-canvas");
 const forecastSpendingCanvasEl = document.getElementById("forecast-spending-canvas");
@@ -157,11 +159,15 @@ const TAB_INTROS = {
   },
   "getting-started": {
     title: "Getting Started",
-    text: "Your setup checklist — connect a bank and fill in a few basics to get Ledger dialed in.",
+    text: "Your setup checklist. Connect a bank and fill in a few basics to get Ledger dialed in.",
   },
   "manage": {
     title: "Manage",
-    text: "Connect banks, add things that aren't linked, and track subscriptions, debt payoff, and savings goals.",
+    text: "Connect banks, add things that aren't linked, compare investing vs. spending, and track debt payoff.",
+  },
+  "discretionary": {
+    title: "Discretionary",
+    text: "Check the impact of a new purchase before you make it, track things you're saving for, and audit your subscriptions.",
   },
   "forecast": {
     title: "Forecast (Beta)",
@@ -199,6 +205,7 @@ const tabIntroStepEl = document.getElementById("tab-intro-step");
 const WALKTHROUGH_ORDER = [
   "dashboard",
   "manage",
+  "discretionary",
   "forecast",
   "book-call",
   "faq",
@@ -254,6 +261,7 @@ const TAB_ORDER = [
   "getting-started",
   "dashboard",
   "manage",
+  "discretionary",
   "forecast",
   "book-call",
   "faq",
@@ -330,9 +338,11 @@ ledgerBrandEl.addEventListener("click", () => {
   dashboardBtn.click();
 });
 
-document.getElementById("no-bank-banner-btn").addEventListener("click", () => {
+document.getElementById("attention-banner-btn").addEventListener("click", () => {
   document.querySelector('.topnav-tab[data-tab="manage"]').click();
-  setTimeout(() => connectBtn.click(), 300);
+  if (!latestBalances?.accounts?.length) {
+    setTimeout(() => connectBtn.click(), 300);
+  }
 });
 
 // ---------------------------------------------------------------
@@ -615,12 +625,21 @@ function renderBalances(data) {
   }
 
   accountsListEl.innerHTML = "";
+  const hasComplexAnswer = localStorage.getItem("ledger_has_complex_investments") !== null;
+  const banner = document.getElementById("attention-banner");
+  const bannerText = document.getElementById("attention-banner-text");
   if (!data.accounts || data.accounts.length === 0) {
     accountsListEl.innerHTML = `<div class="empty-state">No accounts connected yet.</div>`;
-    document.getElementById("no-bank-banner").classList.remove("hidden");
+    bannerText.textContent = "No bank account connected";
+    banner.classList.remove("hidden");
     return;
   }
-  document.getElementById("no-bank-banner").classList.add("hidden");
+  if (!hasComplexAnswer) {
+    bannerText.textContent = "Finish setting up your profile";
+    banner.classList.remove("hidden");
+  } else {
+    banner.classList.add("hidden");
+  }
 
   for (const acct of data.accounts) {
     const row = document.createElement("div");
@@ -1108,8 +1127,11 @@ const FORECAST_ANNUAL_RETURN = 0.07;
 function renderGoal(data) {
   const savedSavings = localStorage.getItem("ledger_extra_savings");
   const savedInvesting = localStorage.getItem("ledger_extra_investing");
+  const savedGoal = localStorage.getItem("ledger_goal_net_worth");
   if (savedSavings) extraSavingsEl.value = savedSavings;
   if (savedInvesting) extraInvestingEl.value = savedInvesting;
+  if (savedGoal) goalNetWorthEl.value = savedGoal;
+  if (data) forecastCurrentNetWorthEl.textContent = formatMoney(data.net_worth);
   updateForecast(data);
 }
 
@@ -1122,6 +1144,7 @@ function updateForecast(data) {
   const history = data.history ?? [];
   const extraSavings = parseFloat(extraSavingsEl.value) || 0;
   const extraInvesting = parseFloat(extraInvestingEl.value) || 0;
+  const goalNetWorth = parseFloat(goalNetWorthEl.value) || 0;
 
   if (history.length < 2) {
     goalResultEl.textContent = "Need a bit more history to project a timeline.";
@@ -1145,18 +1168,35 @@ function updateForecast(data) {
   const adjustedFinal = baselineFinal + flatSavingsTotal + investingFV;
 
   const hasExtra = extraSavings > 0 || extraInvesting > 0;
+  const projectedNetWorth = hasExtra ? adjustedFinal : baselineFinal;
+
+  let goalLine = "";
+  if (goalNetWorth > 0) {
+    if (projectedNetWorth >= goalNetWorth) {
+      goalLine = `<p>At this pace, you're on track to pass your ${formatMoney(goalNetWorth)} goal within ${FORECAST_YEARS} years.</p>`;
+    } else {
+      const gap = goalNetWorth - projectedNetWorth;
+      goalLine = `<p>At this pace, you're projected to be about ${formatMoney(gap)} short of your ${formatMoney(goalNetWorth)} goal in ${FORECAST_YEARS} years.</p>`;
+    }
+  }
+
+  let planPhrase = "";
+  if (extraSavings > 0 && extraInvesting > 0) {
+    planPhrase = `save ${formatMoney(extraSavings)}/mo and invest ${formatMoney(extraInvesting)}/mo`;
+  } else if (extraSavings > 0) {
+    planPhrase = `save ${formatMoney(extraSavings)}/mo`;
+  } else if (extraInvesting > 0) {
+    planPhrase = `invest ${formatMoney(extraInvesting)}/mo`;
+  }
 
   goalResultEl.innerHTML = `
-    <p>At your current pace: ~${formatMoney(baselineFinal)} in ${FORECAST_YEARS} years.</p>
+    <p>Right now your net worth is ${formatMoney(last.net_worth)}.</p>
     ${
       hasExtra
-        ? `<p>With ${extraSavings > 0 ? `${formatMoney(extraSavings)}/mo extra savings` : ""}${
-            extraSavings > 0 && extraInvesting > 0 ? " + " : ""
-          }${extraInvesting > 0 ? `${formatMoney(extraInvesting)}/mo extra investing` : ""}: ~${formatMoney(
-            adjustedFinal
-          )} in ${FORECAST_YEARS} years (+${formatMoney(adjustedFinal - baselineFinal)}).</p>`
-        : ""
+        ? `<p>If you ${planPhrase}, you'll reach about ${formatMoney(adjustedFinal)} in ${FORECAST_YEARS} years.</p>`
+        : `<p>Based on your recent trend alone, you're on pace for about ${formatMoney(baselineFinal)} in ${FORECAST_YEARS} years.</p>`
     }
+    ${goalLine}
     <p class="beta-disclaimer">Forecast is in beta, a planning estimate using a 7%/yr market-average assumption for the investing portion, not a guarantee.</p>
   `;
 
@@ -1171,6 +1211,11 @@ extraSavingsEl.addEventListener("input", () => {
 
 extraInvestingEl.addEventListener("input", () => {
   localStorage.setItem("ledger_extra_investing", extraInvestingEl.value);
+  updateForecast(latestBalances);
+});
+
+goalNetWorthEl.addEventListener("input", () => {
+  localStorage.setItem("ledger_goal_net_worth", goalNetWorthEl.value);
   updateForecast(latestBalances);
 });
 
@@ -1781,7 +1826,7 @@ document.getElementById("complex-invest-no")?.addEventListener("click", () => {
 document.getElementById("complex-invest-unsure")?.addEventListener("click", () => {
   localStorage.setItem("ledger_has_complex_investments", "false");
   applyComplexInvestState();
-  showToast("Kept it simple — you can change this anytime");
+  showToast("Got it, you can change this anytime");
 });
 
 applyComplexInvestState();
@@ -1975,6 +2020,11 @@ authToggleBtnEl.addEventListener("click", () => {
     authMode === "signin" ? "Don't have an account? Sign up" : "Already have an account? Sign in";
   authStatusEl.textContent = "";
   authCardEl.classList.toggle("signup-mode", authMode === "signup");
+  // Clear whatever the browser autofilled and swap the autocomplete hint so
+  // it stops offering saved sign-in credentials on the signup form.
+  authEmailEl.value = "";
+  authPasswordEl.value = "";
+  authPasswordEl.autocomplete = authMode === "signup" ? "new-password" : "current-password";
 });
 
 authFormEl.addEventListener("submit", async (e) => {
@@ -1986,6 +2036,12 @@ authFormEl.addEventListener("submit", async (e) => {
   const password = authPasswordEl.value;
   const wasSigningUp = authMode === "signup";
 
+  // Set this BEFORE the async call, not after — onAuthStateChange can fire
+  // and call showApp() while signUp() is still resolving, so setting the
+  // flag afterward was a race condition that made Getting Started routing
+  // land inconsistently.
+  if (wasSigningUp) justSignedUp = true;
+
   const { error } =
     authMode === "signin"
       ? await supabaseClient.auth.signInWithPassword({ email, password })
@@ -1994,11 +2050,11 @@ authFormEl.addEventListener("submit", async (e) => {
   authSubmitBtnEl.disabled = false;
 
   if (error) {
+    if (wasSigningUp) justSignedUp = false;
     authStatusEl.textContent = error.message;
     return;
   }
 
-  if (wasSigningUp) justSignedUp = true;
   authStatusEl.textContent = "";
   // onAuthStateChange below handles showing the app once the session lands.
 });
