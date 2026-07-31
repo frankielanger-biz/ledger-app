@@ -30,7 +30,7 @@ const authTitleEl = document.getElementById("auth-title");
 const authCardEl = document.querySelector(".auth-card");
 
 let authMode = "signin"; // or "signup"
-let appHasBooted = false;
+let oauthResumeChecked = false;
 let justSignedUp = false;
 
 const netWorthValueEl = document.getElementById("net-worth-value");
@@ -250,15 +250,80 @@ tabIntroSkipEl.addEventListener("click", endWalkthrough);
 
 document.getElementById("start-walkthrough-btn")?.addEventListener("click", startWalkthrough);
 
+const TAB_ORDER = [
+  "getting-started",
+  "dashboard",
+  "manage",
+  "forecast",
+  "book-call",
+  "faq",
+  "resources",
+  "settings",
+  "beta",
+];
+
+function switchToTab(target, slideDirection) {
+  const btn = document.querySelector(`.topnav-tab[data-tab="${target}"]`);
+  if (!btn) return;
+  tabButtons.forEach((b) => b.classList.toggle("active", b === btn));
+  tabPanels.forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== target));
+  btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  if (slideDirection) {
+    const panel = document.querySelector(`.tab-panel[data-panel="${target}"]`);
+    if (panel) {
+      panel.classList.remove("slide-in-left", "slide-in-right");
+      // Force reflow so the animation restarts even if the same class was used last time.
+      void panel.offsetWidth;
+      panel.classList.add(slideDirection === "left" ? "slide-in-left" : "slide-in-right");
+    }
+  }
+  if (walkthroughActive) showWalkthroughStep(target);
+}
+
 tabButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const target = btn.dataset.tab;
-    tabButtons.forEach((b) => b.classList.toggle("active", b === btn));
-    tabPanels.forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== target));
-    btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-    if (walkthroughActive) showWalkthroughStep(target);
-  });
+  btn.addEventListener("click", () => switchToTab(btn.dataset.tab));
 });
+
+// Swipe left/right between tabs, in nav order.
+let touchStartX = 0;
+let touchStartY = 0;
+
+document.addEventListener(
+  "touchstart",
+  (e) => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  },
+  { passive: true }
+);
+
+document.addEventListener(
+  "touchend",
+  (e) => {
+    const deltaX = e.changedTouches[0].clientX - touchStartX;
+    const deltaY = e.changedTouches[0].clientY - touchStartY;
+    const SWIPE_THRESHOLD = 60;
+
+    // Ignore swipes that are mostly vertical (normal scrolling) or too short.
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) < Math.abs(deltaY) * 1.5) return;
+    // Don't hijack swipes while the auth screen or a modal overlay is up.
+    if (!authScreenEl.classList.contains("hidden")) return;
+    if (!tabIntroOverlayEl.classList.contains("hidden")) return;
+
+    const currentTab = document.querySelector(".topnav-tab.active")?.dataset.tab;
+    const currentIndex = TAB_ORDER.indexOf(currentTab);
+    if (currentIndex === -1) return;
+
+    if (deltaX < 0 && currentIndex < TAB_ORDER.length - 1) {
+      // Swiped left -> go to next tab, incoming panel slides in from the right.
+      switchToTab(TAB_ORDER[currentIndex + 1], "left");
+    } else if (deltaX > 0 && currentIndex > 0) {
+      // Swiped right -> go to previous tab, incoming panel slides in from the left.
+      switchToTab(TAB_ORDER[currentIndex - 1], "right");
+    }
+  },
+  { passive: true }
+);
 
 ledgerBrandEl.addEventListener("click", () => {
   const dashboardBtn = document.querySelector('.topnav-tab[data-tab="dashboard"]');
@@ -414,6 +479,7 @@ async function handlePlaidSuccess(public_token, metadata) {
     });
     dashboardStatus.textContent = "";
     showToast(`${metadata.institution?.name ?? "Bank"} connected`);
+    document.querySelector('.topnav-tab[data-tab="dashboard"]').click();
     await loadEverything();
   } catch (err) {
     dashboardStatus.textContent = `Couldn't finish connecting: ${err.message}`;
@@ -429,8 +495,11 @@ connectBtn.addEventListener("click", async () => {
     // Chase (and other OAuth institutions) redirect out to a real bank login
     // page, then bounce back to this same URL. We need the exact same
     // link_token to resume that session, so it has to survive the redirect —
-    // sessionStorage does that; a normal JS variable would not.
-    sessionStorage.setItem("ledger_plaid_link_token", link_token);
+    // localStorage does that; sessionStorage can get wiped if the browser
+    // reclaims a backgrounded tab's memory during a slow mobile bank login
+    // (MFA, security questions), which sessionStorage does not survive but
+    // localStorage does.
+    localStorage.setItem("ledger_plaid_link_token", link_token);
 
     const handler = Plaid.create({
       token: link_token,
@@ -454,8 +523,13 @@ connectBtn.addEventListener("click", async () => {
 // token we stashed before leaving, rather than starting a new one.
 function maybeResumePlaidOAuth() {
   if (!window.location.href.includes("oauth_state_id=")) return;
-  const savedToken = sessionStorage.getItem("ledger_plaid_link_token");
-  if (!savedToken) return;
+  const savedToken = localStorage.getItem("ledger_plaid_link_token");
+  if (!savedToken) {
+    dashboardStatus.textContent =
+      "Couldn't resume the bank connection after login. Please tap Connect a bank again.";
+    window.history.replaceState({}, document.title, window.location.pathname);
+    return;
+  }
 
   dashboardStatus.textContent = "Finishing bank connection…";
   const handler = Plaid.create({
@@ -468,7 +542,7 @@ function maybeResumePlaidOAuth() {
     },
   });
   handler.open();
-  sessionStorage.removeItem("ledger_plaid_link_token");
+  localStorage.removeItem("ledger_plaid_link_token");
   // Clean the URL so a later refresh doesn't try to resume this again.
   window.history.replaceState({}, document.title, window.location.pathname);
 }
@@ -518,7 +592,7 @@ async function loadEverything() {
   refreshBtn.classList.remove("spinning");
 }
 
-let discreteMode = localStorage.getItem("ledger_discrete_mode") === "true";
+let discreteMode = true; // always defaults on at every load, can be toggled off per-session via the eye icon
 
 function renderBalances(data) {
   if (discreteMode) {
@@ -566,17 +640,14 @@ function renderBalances(data) {
 
 discreteToggleBtnEl.addEventListener("click", () => {
   discreteMode = !discreteMode;
-  localStorage.setItem("ledger_discrete_mode", discreteMode);
   discreteToggleBtnEl.classList.toggle("active", discreteMode);
   eyeOpenIconEl.classList.toggle("hidden", discreteMode);
   eyeClosedIconEl.classList.toggle("hidden", !discreteMode);
   if (latestBalances) renderBalances(latestBalances);
 });
-if (discreteMode) {
-  discreteToggleBtnEl.classList.add("active");
-  eyeOpenIconEl.classList.add("hidden");
-  eyeClosedIconEl.classList.remove("hidden");
-}
+discreteToggleBtnEl.classList.add("active");
+eyeOpenIconEl.classList.add("hidden");
+eyeClosedIconEl.classList.remove("hidden");
 
 refreshBtn.addEventListener("click", loadEverything);
 
@@ -1942,23 +2013,37 @@ function showAuthScreen() {
 function showApp() {
   authScreenEl.classList.add("hidden");
   appRootEl.classList.remove("hidden");
-  if (!appHasBooted) {
-    appHasBooted = true;
+
+  // The OAuth-resume check only matters once per real page load, since it's
+  // tied to a URL parameter Plaid adds on redirect back from the bank.
+  if (!oauthResumeChecked) {
+    oauthResumeChecked = true;
     if (window.location.href.includes("oauth_state_id=")) {
       maybeResumePlaidOAuth();
-    } else if (justSignedUp) {
-      document.querySelector('.topnav-tab[data-tab="getting-started"]').click();
-      justSignedUp = false;
     }
-    loadEverything();
   }
+
+  // Everything below runs on EVERY sign-in, not just the first one on this
+  // page load — otherwise signing out and into a second account in the same
+  // browser session (e.g. someone else trying the app on your device)
+  // silently skips both the new-signup routing and the data reload.
+  if (justSignedUp) {
+    document.querySelector('.topnav-tab[data-tab="getting-started"]').click();
+    justSignedUp = false;
+  } else if (!window.location.href.includes("oauth_state_id=")) {
+    // Every return visit lands on Dashboard, consistently, except a fresh
+    // signup (goes to Getting Started above) or a mid-flight OAuth resume
+    // (handled separately once the bank connection actually finishes).
+    document.querySelector('.topnav-tab[data-tab="dashboard"]').click();
+  }
+
+  loadEverything();
 }
 
 supabaseClient.auth.onAuthStateChange((_event, session) => {
   if (session) {
     showApp();
   } else {
-    appHasBooted = false;
     showAuthScreen();
   }
 });

@@ -425,6 +425,40 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
   width: 100%;
 }
 
+.app-footer {
+  text-align: center;
+  padding: 24px 20px 40px;
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+
+.tab-panel.slide-in-left {
+  animation: slide-in-left 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tab-panel.slide-in-right {
+  animation: slide-in-right 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes slide-in-left {
+  from { transform: translateX(40px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(-40px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.app-footer a {
+  color: var(--ink-dim);
+  text-decoration: underline;
+}
+
+.footer-dot {
+  margin: 0 8px;
+}
+
 .tab-intro-step {
   font-size: 12px;
   font-family: var(--font-mono);
@@ -456,6 +490,8 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  margin-top: 14px;
+  padding: 14px 16px;
 }
 
 .swipe-arrow {
@@ -470,16 +506,15 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
 
 .complex-invest-toggle {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
 }
 
 .complex-invest-toggle .theme-toggle-btn {
-  flex: 1 1 auto;
-  min-width: 100px;
-  padding: 10px 10px;
-  font-size: 13px;
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 14px;
 }
 
 .hero-label {
