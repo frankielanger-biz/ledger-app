@@ -105,6 +105,10 @@ html, body {
 
 .topnav-tab:hover { color: var(--ink); }
 
+/* Dormant tabs — MVP trim (2026-08-02). Code and content are untouched;
+   these are just hidden from nav. Delete this rule to bring any back. */
+.topnav-tab.dormant-tab { display: none; }
+
 .topnav-tab.active {
   color: var(--accent);
   background: var(--accent-dim);
@@ -297,6 +301,9 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
 }
 
 #auth-form button[type="submit"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--accent);
   color: var(--bg);
   border: none;
@@ -352,6 +359,21 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+.btn-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: -2px;
+  opacity: 0.85;
+  animation: spin 0.8s linear infinite;
+}
+
+.btn-spinner.hidden { display: none; }
 
 /* ---------------- Hero (net worth) — centered ---------------- */
 

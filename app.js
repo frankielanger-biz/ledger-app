@@ -24,6 +24,8 @@ const authFormEl = document.getElementById("auth-form");
 const authEmailEl = document.getElementById("auth-email");
 const authPasswordEl = document.getElementById("auth-password");
 const authSubmitBtnEl = document.getElementById("auth-submit-btn");
+const authSubmitSpinnerEl = document.getElementById("auth-submit-spinner");
+const authSubmitLabelEl = document.getElementById("auth-submit-label");
 const authStatusEl = document.getElementById("auth-status");
 const authToggleBtnEl = document.getElementById("auth-toggle-btn");
 const authTitleEl = document.getElementById("auth-title");
@@ -202,16 +204,12 @@ const tabIntroDismissEl = document.getElementById("tab-intro-dismiss");
 const tabIntroSkipEl = document.getElementById("tab-intro-skip");
 const tabIntroStepEl = document.getElementById("tab-intro-step");
 
+// MVP trim (2026-08-02): walkthrough only tours the 5 live tabs.
 const WALKTHROUGH_ORDER = [
   "dashboard",
   "manage",
-  "discretionary",
-  "forecast",
   "book-call",
-  "faq",
-  "resources",
   "settings",
-  "beta",
 ];
 
 let walkthroughActive = false;
@@ -257,17 +255,15 @@ tabIntroSkipEl.addEventListener("click", endWalkthrough);
 
 document.getElementById("start-walkthrough-btn")?.addEventListener("click", startWalkthrough);
 
+// MVP trim (2026-08-02): only these 5 tabs are live in nav. The other 5
+// (discretionary, forecast, faq, resources, beta) still exist in the DOM
+// and their code is untouched — just not reachable from nav right now.
 const TAB_ORDER = [
   "getting-started",
   "dashboard",
   "manage",
-  "discretionary",
-  "forecast",
   "book-call",
-  "faq",
-  "resources",
   "settings",
-  "beta",
 ];
 
 function switchToTab(target, slideDirection) {
@@ -289,7 +285,23 @@ function switchToTab(target, slideDirection) {
 }
 
 tabButtons.forEach((btn) => {
-  btn.addEventListener("click", () => switchToTab(btn.dataset.tab));
+  btn.addEventListener("click", () => {
+    const target = btn.dataset.tab;
+    const currentTab = document.querySelector(".topnav-tab.active")?.dataset.tab;
+    const fromIndex = TAB_ORDER.indexOf(currentTab);
+    const toIndex = TAB_ORDER.indexOf(target);
+    // Direction follows nav order, same convention as swipe: moving to a
+    // later tab slides in from the right, moving to an earlier tab slides
+    // in from the left. Tabs outside TAB_ORDER (e.g. reached via a direct
+    // .click() call elsewhere) just fall back to no animation.
+    const slideDirection =
+      fromIndex === -1 || toIndex === -1 || fromIndex === toIndex
+        ? undefined
+        : toIndex > fromIndex
+        ? "left"
+        : "right";
+    switchToTab(target, slideDirection);
+  });
 });
 
 // ---------------------------------------------------------------
@@ -2011,7 +2023,7 @@ signOutBtnEl.addEventListener("click", async () => {
 authToggleBtnEl.addEventListener("click", () => {
   authMode = authMode === "signin" ? "signup" : "signin";
   authTitleEl.textContent = authMode === "signin" ? "Welcome back" : "Create your account";
-  authSubmitBtnEl.textContent = authMode === "signin" ? "Sign in" : "Sign up";
+  authSubmitLabelEl.textContent = authMode === "signin" ? "Sign in" : "Sign up";
   authToggleBtnEl.textContent =
     authMode === "signin" ? "Don't have an account? Sign up" : "Already have an account? Sign in";
   authStatusEl.textContent = "";
@@ -2026,6 +2038,7 @@ authToggleBtnEl.addEventListener("click", () => {
 authFormEl.addEventListener("submit", async (e) => {
   e.preventDefault();
   authSubmitBtnEl.disabled = true;
+  authSubmitSpinnerEl.classList.remove("hidden");
   authStatusEl.textContent = authMode === "signin" ? "Signing in…" : "Creating your account…";
 
   const email = authEmailEl.value.trim();
@@ -2044,6 +2057,7 @@ authFormEl.addEventListener("submit", async (e) => {
       : await supabaseClient.auth.signUp({ email, password });
 
   authSubmitBtnEl.disabled = false;
+  authSubmitSpinnerEl.classList.add("hidden");
 
   if (error) {
     if (wasSigningUp) justSignedUp = false;

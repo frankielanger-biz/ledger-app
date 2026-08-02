@@ -29,7 +29,10 @@
       <form id="auth-form">
         <input type="email" id="auth-email" placeholder="you@email.com" required autocomplete="email" />
         <input type="password" id="auth-password" placeholder="Password" required autocomplete="current-password" minlength="6" />
-        <button type="submit" id="auth-submit-btn">Sign in</button>
+        <button type="submit" id="auth-submit-btn">
+          <span id="auth-submit-spinner" class="btn-spinner hidden"></span>
+          <span id="auth-submit-label">Sign in</span>
+        </button>
       </form>
       <p id="auth-status" class="auth-status"></p>
       <button id="auth-toggle-btn" class="auth-toggle-btn">Don't have an account? Sign up</button>
@@ -66,13 +69,13 @@
       <button class="topnav-tab" data-tab="getting-started">Getting Started</button>
       <button class="topnav-tab active" data-tab="dashboard">Dashboard</button>
       <button class="topnav-tab" data-tab="manage">Manage</button>
-      <button class="topnav-tab" data-tab="discretionary">Discretionary</button>
-      <button class="topnav-tab" data-tab="forecast">Forecast</button>
+      <button class="topnav-tab dormant-tab" data-tab="discretionary">Discretionary</button>
+      <button class="topnav-tab dormant-tab" data-tab="forecast">Forecast</button>
       <button class="topnav-tab" data-tab="book-call">Book a call</button>
-      <button class="topnav-tab" data-tab="faq">FAQ</button>
-      <button class="topnav-tab" data-tab="resources">Resources</button>
+      <button class="topnav-tab dormant-tab" data-tab="faq">FAQ</button>
+      <button class="topnav-tab dormant-tab" data-tab="resources">Resources</button>
       <button class="topnav-tab" data-tab="settings">Settings</button>
-      <button class="topnav-tab" data-tab="beta">In Progress</button>
+      <button class="topnav-tab dormant-tab" data-tab="beta">In Progress</button>
     </div>
   </nav>
 
