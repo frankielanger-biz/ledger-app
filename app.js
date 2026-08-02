@@ -87,6 +87,7 @@ const manualCategoryEl = document.getElementById("manual-category");
 const manualSubmitBtnEl = document.getElementById("manual-submit-btn");
 const manualAddStatusEl = document.getElementById("manual-add-status");
 const ledgerBrandEl = document.querySelector(".topnav-brand");
+const returnToDashboardToggleEl = document.getElementById("settings-return-to-dashboard");
 
 // New feature elements
 const percentileLineEl = document.getElementById("percentile-line");
@@ -292,6 +293,30 @@ tabButtons.forEach((btn) => {
   btn.addEventListener("click", () => switchToTab(btn.dataset.tab));
 });
 
+// ---------------------------------------------------------------
+// "Return to Dashboard after actions" — a single setting that controls
+// whether completing an action (connecting a bank, adding a manual item,
+// disconnecting a bank) always lands the user back on the Dashboard tab.
+// Defaults to on, since that was already the behavior for bank connects;
+// this just makes it consistent across the other action flows too, and
+// gives Frankie a way to turn it off if it feels heavy-handed later.
+// ---------------------------------------------------------------
+
+const RETURN_TO_DASHBOARD_KEY = "ledger_return_to_dashboard";
+
+function returnToDashboardIfEnabled() {
+  const enabled = localStorage.getItem(RETURN_TO_DASHBOARD_KEY) !== "false";
+  if (!enabled) return;
+  document.querySelector('.topnav-tab[data-tab="dashboard"]').click();
+}
+
+if (returnToDashboardToggleEl) {
+  returnToDashboardToggleEl.checked = localStorage.getItem(RETURN_TO_DASHBOARD_KEY) !== "false";
+  returnToDashboardToggleEl.addEventListener("change", () => {
+    localStorage.setItem(RETURN_TO_DASHBOARD_KEY, returnToDashboardToggleEl.checked);
+  });
+}
+
 // Swipe left/right between tabs, in nav order.
 let touchStartX = 0;
 let touchStartY = 0;
@@ -489,7 +514,7 @@ async function handlePlaidSuccess(public_token, metadata) {
     });
     dashboardStatus.textContent = "";
     showToast(`${metadata.institution?.name ?? "Bank"} connected`);
-    document.querySelector('.topnav-tab[data-tab="dashboard"]').click();
+    returnToDashboardIfEnabled();
     await loadEverything();
   } catch (err) {
     dashboardStatus.textContent = `Couldn't finish connecting: ${err.message}`;
@@ -1579,6 +1604,7 @@ manualSubmitBtnEl.addEventListener("click", async () => {
     manualAddStatusEl.textContent = "Added.";
     addManualFormEl.classList.add("hidden");
     showToast(`${label} added`);
+    returnToDashboardIfEnabled();
     await loadEverything();
   } catch (err) {
     manualAddStatusEl.textContent = `Couldn't add it: ${err.message}`;
@@ -1965,6 +1991,8 @@ function renderSettingsAccounts(data) {
       btn.textContent = "Disconnecting…";
       try {
         await callFunction("disconnect-item", { item_id: btn.dataset.itemId });
+        showToast("Bank disconnected");
+        returnToDashboardIfEnabled();
         await loadEverything();
       } catch (err) {
         btn.textContent = "Failed";
