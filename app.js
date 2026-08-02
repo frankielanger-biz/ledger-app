@@ -124,7 +124,6 @@ const settingsAccountsListEl = document.getElementById("settings-accounts-list")
 const inviteFriendsBtnEl = document.getElementById("invite-friends-btn");
 const inviteStatusEl = document.getElementById("invite-status");
 const settingsSaveStatusEl = document.getElementById("settings-save-status");
-const swipeContainerEl = document.getElementById("swipe-container");
 
 const BOOKING_EMAIL = "frankielanger@gmail.com";
 
@@ -317,13 +316,18 @@ if (returnToDashboardToggleEl) {
   });
 }
 
-// Swipe left/right between tabs, in nav order.
+// Swipe left/right between tabs. Scoped to the top nav bar only — a swipe
+// must start there, not over tile content below, so it doesn't fight with
+// scrolling or interacting with dashboard tiles, charts, and forms.
 let touchStartX = 0;
 let touchStartY = 0;
+let touchStartedOnNav = false;
 
 document.addEventListener(
   "touchstart",
   (e) => {
+    touchStartedOnNav = !!e.target.closest(".topnav");
+    if (!touchStartedOnNav) return;
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
   },
@@ -333,6 +337,7 @@ document.addEventListener(
 document.addEventListener(
   "touchend",
   (e) => {
+    if (!touchStartedOnNav) return;
     const deltaX = e.changedTouches[0].clientX - touchStartX;
     const deltaY = e.changedTouches[0].clientY - touchStartY;
     const SWIPE_THRESHOLD = 60;
@@ -369,43 +374,6 @@ document.getElementById("attention-banner-btn").addEventListener("click", () => 
     setTimeout(() => connectBtn.click(), 300);
   }
 });
-
-// ---------------------------------------------------------------
-// Swipe left/right to move between tabs, in nav order
-// ---------------------------------------------------------------
-
-let swipeStartX = null;
-let swipeStartY = null;
-
-swipeContainerEl.addEventListener(
-  "touchstart",
-  (e) => {
-    swipeStartX = e.touches[0].clientX;
-    swipeStartY = e.touches[0].clientY;
-  },
-  { passive: true }
-);
-
-swipeContainerEl.addEventListener(
-  "touchend",
-  (e) => {
-    if (swipeStartX === null) return;
-    const deltaX = e.changedTouches[0].clientX - swipeStartX;
-    const deltaY = e.changedTouches[0].clientY - swipeStartY;
-
-    // Require a clearly horizontal swipe so vertical scrolling isn't hijacked.
-    if (Math.abs(deltaX) > 60 && Math.abs(deltaX) > Math.abs(deltaY) * 2) {
-      const buttons = Array.from(tabButtons);
-      const currentIdx = buttons.findIndex((b) => b.classList.contains("active"));
-      const nextIdx = deltaX < 0 ? currentIdx + 1 : currentIdx - 1;
-      if (nextIdx >= 0 && nextIdx < buttons.length) buttons[nextIdx].click();
-    }
-
-    swipeStartX = null;
-    swipeStartY = null;
-  },
-  { passive: true }
-);
 
 // ---------------------------------------------------------------
 // Pull-to-refresh — only triggers when already at the top of the page,
