@@ -29,6 +29,10 @@
       <form id="auth-form">
         <input type="email" id="auth-email" placeholder="you@email.com" required autocomplete="email" />
         <input type="password" id="auth-password" placeholder="Password" required autocomplete="current-password" minlength="6" />
+        <label id="auth-consent-row" class="checkbox-row auth-consent-row hidden">
+          <input type="checkbox" id="auth-consent-check" />
+          <span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a></span>
+        </label>
         <button type="submit" id="auth-submit-btn">Sign in</button>
       </form>
       <p id="auth-status" class="auth-status"></p>
@@ -665,6 +669,16 @@
     <div class="settings-divider"></div>
 
     <button id="sign-out-btn" class="sign-out-btn">Sign out</button>
+
+    <div class="settings-divider"></div>
+
+    <div class="settings-section-label">Danger zone</div>
+    <div class="resource-card-desc" style="margin-bottom: 12px;">
+      Permanently deletes your account, connected banks, net worth history, and everything else
+      tied to it. This can't be undone.
+    </div>
+    <button id="delete-account-btn" class="sign-out-btn delete-account-btn">Delete my account</button>
+    <div id="delete-account-status" class="dashboard-status"></div>
   </section>
 
   <!-- ===================== IN PROGRESS TAB ===================== -->

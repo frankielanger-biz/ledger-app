@@ -348,6 +348,19 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
   cursor: pointer;
 }
 
+.delete-account-btn {
+  background: rgba(220, 60, 60, 0.08);
+}
+
+.auth-consent-row {
+  font-size: 12px;
+  margin: 14px 0;
+}
+
+.auth-consent-row a {
+  color: var(--accent);
+}
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }

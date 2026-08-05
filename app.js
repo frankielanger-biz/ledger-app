@@ -28,6 +28,8 @@ const authStatusEl = document.getElementById("auth-status");
 const authToggleBtnEl = document.getElementById("auth-toggle-btn");
 const authTitleEl = document.getElementById("auth-title");
 const authCardEl = document.querySelector(".auth-card");
+const authConsentRowEl = document.getElementById("auth-consent-row");
+const authConsentCheckEl = document.getElementById("auth-consent-check");
 
 let authMode = "signin"; // or "signup"
 let oauthResumeChecked = false;
@@ -491,7 +493,7 @@ async function handlePlaidSuccess(public_token, metadata) {
     dashboardStatus.textContent = "";
     showToast(`${metadata.institution?.name ?? "Bank"} connected`);
     document.querySelector('.topnav-tab[data-tab="dashboard"]').click();
-    await loadEverything();
+    await loadEverything(true);
   } catch (err) {
     dashboardStatus.textContent = `Couldn't finish connecting: ${err.message}`;
   }
@@ -562,12 +564,12 @@ function maybeResumePlaidOAuth() {
 // Loading data — balances + transactions, then render everything
 // ---------------------------------------------------------------
 
-async function loadEverything() {
+async function loadEverything(force = false) {
   refreshBtn.classList.add("spinning");
   topbarStatusEl.textContent = "Pulling balances…";
 
   try {
-    const balances = await callFunction("get-balances");
+    const balances = await callFunction("get-balances", { force });
     latestBalances = balances;
     latestHistory = balances.history ?? [];
     renderBalances(balances);
@@ -576,6 +578,9 @@ async function loadEverything() {
     renderGoal(balances);
     renderSettingsAccounts(balances);
     renderPercentile(balances);
+    if (balances.cached) {
+      showToast("Showing balances from earlier this hour");
+    }
   } catch (err) {
     topbarStatusEl.textContent = "";
     dashboardStatus.textContent = `Couldn't load balances: ${err.message}`;
@@ -1838,7 +1843,7 @@ function renderSettingsAccounts(data) {
       btn.textContent = "Disconnecting…";
       try {
         await callFunction("disconnect-item", { item_id: btn.dataset.itemId });
-        await loadEverything();
+        await loadEverything(true);
       } catch (err) {
         btn.textContent = "Failed";
         console.error(err);
@@ -1881,6 +1886,34 @@ signOutBtnEl.addEventListener("click", async () => {
   await supabaseClient.auth.signOut();
 });
 
+const deleteAccountBtnEl = document.getElementById("delete-account-btn");
+const deleteAccountStatusEl = document.getElementById("delete-account-status");
+
+deleteAccountBtnEl.addEventListener("click", async () => {
+  const typed = prompt('This permanently deletes your account and all your data. Type "DELETE" to confirm.');
+  if (typed !== "DELETE") return;
+
+  deleteAccountBtnEl.disabled = true;
+  deleteAccountStatusEl.textContent = "Deleting your account…";
+
+  try {
+    await callFunction("delete-account");
+  } catch (err) {
+    deleteAccountBtnEl.disabled = false;
+    deleteAccountStatusEl.textContent = `Couldn't delete account: ${err.message}`;
+    return;
+  }
+
+  // The account is gone at this point. Signing out just clears the local
+  // session; if it errors (e.g. the user no longer exists server-side),
+  // that's not a deletion failure, so don't show it as one.
+  try {
+    await supabaseClient.auth.signOut();
+  } catch {
+    location.reload();
+  }
+});
+
 // ---------------------------------------------------------------
 // Auth — real sign in / sign up, gates the whole app
 // ---------------------------------------------------------------
@@ -1893,6 +1926,8 @@ authToggleBtnEl.addEventListener("click", () => {
     authMode === "signin" ? "Don't have an account? Sign up" : "Already have an account? Sign in";
   authStatusEl.textContent = "";
   authCardEl.classList.toggle("signup-mode", authMode === "signup");
+  authConsentRowEl.classList.toggle("hidden", authMode !== "signup");
+  authConsentCheckEl.checked = false;
   // Clear whatever the browser autofilled and swap the autocomplete hint so
   // it stops offering saved sign-in credentials on the signup form.
   authEmailEl.value = "";
@@ -1902,12 +1937,19 @@ authToggleBtnEl.addEventListener("click", () => {
 
 authFormEl.addEventListener("submit", async (e) => {
   e.preventDefault();
+
+  const wasSigningUp = authMode === "signup";
+
+  if (wasSigningUp && !authConsentCheckEl.checked) {
+    authStatusEl.textContent = "Please agree to the Terms of Service and Privacy Policy to continue.";
+    return;
+  }
+
   authSubmitBtnEl.disabled = true;
   authStatusEl.textContent = authMode === "signin" ? "Signing in…" : "Creating your account…";
 
   const email = authEmailEl.value.trim();
   const password = authPasswordEl.value;
-  const wasSigningUp = authMode === "signup";
 
   // Set this BEFORE the async call, not after — onAuthStateChange can fire
   // and call showApp() while signUp() is still resolving, so setting the
