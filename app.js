@@ -65,7 +65,6 @@ const extraInvestingEl = document.getElementById("extra-investing-input");
 const goalNetWorthEl = document.getElementById("goal-net-worth-input");
 const forecastCurrentNetWorthEl = document.getElementById("forecast-current-net-worth");
 const goalResultEl = document.getElementById("goal-result");
-const forecastTrajectoryCanvasEl = document.getElementById("forecast-trajectory-canvas");
 const investAmountEl = document.getElementById("invest-amount");
 const investYearsEl = document.getElementById("invest-years");
 const investCadenceEl = document.getElementById("invest-cadence");
@@ -1192,34 +1191,38 @@ function updateForecast(data) {
   let goalLine = "";
   if (goalNetWorth > 0) {
     if (projectedNetWorth >= goalNetWorth) {
-      goalLine = `<p>At this pace, you're on track to pass your ${formatMoney(goalNetWorth)} goal within ${FORECAST_YEARS} years.</p>`;
+      goalLine = `<p class="goal-status goal-status-hit">On track to pass your ${formatMoney(goalNetWorth)} goal within ${FORECAST_YEARS} years.</p>`;
     } else {
       const gap = goalNetWorth - projectedNetWorth;
-      goalLine = `<p>At this pace, you're projected to be about ${formatMoney(gap)} short of your ${formatMoney(goalNetWorth)} goal in ${FORECAST_YEARS} years.</p>`;
+      goalLine = `<p class="goal-status goal-status-short">Projected to fall about ${formatMoney(gap)} short of your ${formatMoney(goalNetWorth)} goal in ${FORECAST_YEARS} years.</p>`;
     }
   }
 
-  let planPhrase = "";
+  let planLabel = "If you save/invest this much";
   if (extraSavings > 0 && extraInvesting > 0) {
-    planPhrase = `save ${formatMoney(extraSavings)}/mo and invest ${formatMoney(extraInvesting)}/mo`;
+    planLabel = `If you save ${formatMoney(extraSavings)}/mo and invest ${formatMoney(extraInvesting)}/mo`;
   } else if (extraSavings > 0) {
-    planPhrase = `save ${formatMoney(extraSavings)}/mo`;
+    planLabel = `If you save ${formatMoney(extraSavings)}/mo`;
   } else if (extraInvesting > 0) {
-    planPhrase = `invest ${formatMoney(extraInvesting)}/mo`;
+    planLabel = `If you invest ${formatMoney(extraInvesting)}/mo`;
   }
 
   goalResultEl.innerHTML = `
-    <p>Right now your net worth is ${formatMoney(last.net_worth)}.</p>
-    ${
-      hasExtra
-        ? `<p>If you ${planPhrase}, you'll reach about ${formatMoney(adjustedFinal)} in ${FORECAST_YEARS} years.</p>`
-        : `<p>Based on your recent trend alone, you're on pace for about ${formatMoney(baselineFinal)} in ${FORECAST_YEARS} years.</p>`
-    }
+    <div class="forecast-numbers">
+      <div class="forecast-number-block">
+        <div class="forecast-number-label">If you stay exactly the same</div>
+        <div class="forecast-number-value">${formatMoney(baselineFinal)}</div>
+        <div class="forecast-number-sub">in ${FORECAST_YEARS} years</div>
+      </div>
+      <div class="forecast-number-block forecast-number-block-highlight">
+        <div class="forecast-number-label">${planLabel}</div>
+        <div class="forecast-number-value">${formatMoney(adjustedFinal)}</div>
+        <div class="forecast-number-sub">in ${FORECAST_YEARS} years</div>
+      </div>
+    </div>
     ${goalLine}
     <p class="beta-disclaimer">Forecast is in beta, a planning estimate using a 7%/yr market-average assumption for the investing portion, not a guarantee.</p>
   `;
-
-  renderTrajectoryGraph(data, baseGrowthPerDay, extraSavings, extraInvesting);
 }
 
 extraSavingsEl.addEventListener("input", () => {
@@ -1236,196 +1239,6 @@ goalNetWorthEl.addEventListener("input", () => {
   localStorage.setItem("ledger_goal_net_worth", goalNetWorthEl.value);
   updateForecast(latestBalances);
 });
-
-// ---------------------------------------------------------------
-// Net worth trajectory graph — historical line + two projected
-// curves (current pace vs. with extra savings/investing)
-// ---------------------------------------------------------------
-
-function renderTrajectoryGraph(data, baseGrowthPerDay, extraSavings, extraInvesting) {
-  const canvas = forecastTrajectoryCanvasEl;
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  const width = rect.width || canvas.parentElement.clientWidth;
-  const height = 150;
-  canvas.width = Math.round(width * dpr);
-  canvas.height = Math.round(height * dpr);
-  const ctx = canvas.getContext("2d");
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, width, height);
-
-  const history = data.history ?? [];
-  if (history.length < 2) {
-    ctx.font = "13px Manrope, sans-serif";
-    ctx.fillStyle = "#7C948A";
-    ctx.textBaseline = "middle";
-    ctx.fillText("Need a bit more history to project this.", 10, height / 2);
-    trajectoryChartState = null;
-    return;
-  }
-
-  const months = FORECAST_YEARS * 12;
-  const monthlyRate = FORECAST_ANNUAL_RETURN / 12;
-  const monthlyBaseGrowth = baseGrowthPerDay * 30.44;
-  const lastPoint = history[history.length - 1];
-
-  // Build monthly projected points for both curves.
-  const baselineSeries = [];
-  const adjustedSeries = [];
-  let investingBalance = 0;
-  for (let m = 0; m <= months; m++) {
-    const baseline = lastPoint.net_worth + monthlyBaseGrowth * m;
-    investingBalance = m === 0 ? 0 : investingBalance * (1 + monthlyRate) + extraInvesting;
-    const adjusted = baseline + extraSavings * m + investingBalance;
-    baselineSeries.push(baseline);
-    adjustedSeries.push(adjusted);
-  }
-
-  const hasExtra = extraSavings > 0 || extraInvesting > 0;
-  const allValues = [...history.map((h) => h.net_worth), ...baselineSeries, ...(hasExtra ? adjustedSeries : [])];
-  const min = Math.min(...allValues);
-  const max = Math.max(...allValues);
-  const range = max - min || 1;
-  const padding = 10;
-  const totalUnits = history.length - 1 + months;
-
-  const xForHistory = (i) => padding + (i / totalUnits) * (width - padding * 2);
-  const xForMonth = (m) => padding + ((history.length - 1 + m) / totalUnits) * (width - padding * 2);
-  const yFor = (v) => height - padding - ((v - min) / range) * (height - padding * 2);
-
-  // Historical line (solid, real data)
-  ctx.beginPath();
-  ctx.strokeStyle = "#00D9A3";
-  ctx.lineWidth = 2;
-  history.forEach((point, i) => {
-    const x = xForHistory(i);
-    const y = yFor(point.net_worth);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-
-  // Baseline projection (dashed, current pace)
-  ctx.beginPath();
-  ctx.setLineDash([5, 5]);
-  ctx.strokeStyle = "#7C948A";
-  ctx.lineWidth = 2;
-  baselineSeries.forEach((v, m) => {
-    const x = xForMonth(m);
-    const y = yFor(v);
-    if (m === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Adjusted projection (solid gold). Always drawn, even at $0 extra, so
-  // the graph reads as two lines from the start; it'll sit on top of the
-  // baseline until the person enters a savings/investing amount.
-  ctx.beginPath();
-  ctx.strokeStyle = "#D9A24F";
-  ctx.lineWidth = 2;
-  adjustedSeries.forEach((v, m) => {
-    const x = xForMonth(m);
-    const y = yFor(v);
-    if (m === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-
-  // Save enough state to answer "what's the value at this x position" for
-  // the tap-and-hold tooltip, without re-running all the math on every move.
-  trajectoryChartState = {
-    width,
-    height,
-    padding,
-    totalUnits,
-    history,
-    baselineSeries,
-    adjustedSeries,
-    hasExtra,
-    lastDate: new Date(lastPoint.created_at),
-  };
-}
-
-let trajectoryChartState = null;
-let trajectoryTooltipActive = false;
-
-function drawTrajectoryTooltip(clientX) {
-  if (!trajectoryChartState) return;
-  const { width, height, padding, totalUnits, history, baselineSeries, adjustedSeries, hasExtra, lastDate } =
-    trajectoryChartState;
-  const canvas = forecastTrajectoryCanvasEl;
-  const rect = canvas.getBoundingClientRect();
-  const relX = clamp(clientX - rect.left, padding, width - padding);
-  const unit = ((relX - padding) / (width - padding * 2)) * totalUnits;
-
-  let label, value;
-  if (unit <= history.length - 1) {
-    const i = Math.round(clamp(unit, 0, history.length - 1));
-    const point = history[i];
-    label = new Date(point.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    value = point.net_worth;
-  } else {
-    const m = Math.round(unit - (history.length - 1));
-    const projDate = new Date(lastDate);
-    projDate.setMonth(projDate.getMonth() + m);
-    label = projDate.toLocaleDateString("en-US", { month: "short", year: "numeric" });
-    value = hasExtra ? adjustedSeries[m] : baselineSeries[m];
-  }
-
-  // Redraw the base chart, then overlay the crosshair + tooltip on top.
-  updateForecast(latestBalances);
-  const ctx = canvas.getContext("2d");
-  const dpr = window.devicePixelRatio || 1;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-  ctx.beginPath();
-  ctx.strokeStyle = "#7C948A";
-  ctx.lineWidth = 1;
-  ctx.setLineDash([3, 3]);
-  ctx.moveTo(relX, 0);
-  ctx.lineTo(relX, height);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  const boxText = `${label}  ${formatMoney(value)}`;
-  ctx.font = "12px Manrope, sans-serif";
-  const textWidth = ctx.measureText(boxText).width;
-  const boxX = clamp(relX - textWidth / 2 - 8, 2, width - textWidth - 18);
-
-  ctx.fillStyle = "rgba(15, 23, 20, 0.92)";
-  ctx.fillRect(boxX, 6, textWidth + 16, 22);
-  ctx.fillStyle = "#E8F2EC";
-  ctx.textBaseline = "middle";
-  ctx.fillText(boxText, boxX + 8, 17);
-}
-
-function bindTrajectoryTooltipEvents() {
-  const canvas = forecastTrajectoryCanvasEl;
-
-  const start = (clientX) => {
-    trajectoryTooltipActive = true;
-    drawTrajectoryTooltip(clientX);
-  };
-  const move = (clientX) => {
-    if (trajectoryTooltipActive) drawTrajectoryTooltip(clientX);
-  };
-  const end = () => {
-    if (!trajectoryTooltipActive) return;
-    trajectoryTooltipActive = false;
-    updateForecast(latestBalances);
-  };
-
-  canvas.addEventListener("touchstart", (e) => start(e.touches[0].clientX), { passive: true });
-  canvas.addEventListener("touchmove", (e) => move(e.touches[0].clientX), { passive: true });
-  canvas.addEventListener("touchend", end);
-  canvas.addEventListener("mousedown", (e) => start(e.clientX));
-  canvas.addEventListener("mousemove", (e) => move(e.clientX));
-  window.addEventListener("mouseup", end);
-}
-
-bindTrajectoryTooltipEvents();
 
 // ---------------------------------------------------------------
 // "Invest instead" comparison — grounded in a real ticker's current price.

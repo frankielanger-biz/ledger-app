@@ -1319,50 +1319,54 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
   width: 140px;
 }
 
-.forecast-graph-block {
-  margin-top: 24px;
+.forecast-numbers {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
   text-align: left;
 }
 
-.forecast-graph-block canvas {
-  width: 100%;
-  height: 140px;
-  margin-top: 8px;
-  display: block;
+.forecast-number-block {
+  flex: 1;
+  background: var(--bg-raised);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 16px 14px;
 }
 
-#forecast-trajectory-canvas {
-  height: 150px;
+.forecast-number-block-highlight {
+  border-color: var(--accent);
+  background: rgba(0, 217, 163, 0.08);
 }
 
-.forecast-legend {
-  display: flex;
-  gap: 16px;
-  margin-top: 8px;
+.forecast-number-label {
   font-size: 12px;
   color: var(--ink-dim);
+  min-height: 32px;
 }
 
-.forecast-legend span {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.forecast-number-value {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 600;
+  margin-top: 6px;
+  letter-spacing: -0.01em;
 }
 
-.legend-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+.forecast-number-sub {
+  font-size: 11px;
+  color: var(--ink-dim);
+  margin-top: 2px;
 }
 
-.legend-dot-actual {
-  background: #7C948A;
+.goal-status {
+  margin-top: 16px;
+  font-size: 14px;
+  text-align: left;
 }
 
-.legend-dot-adjusted {
-  background: #D9A24F;
-}
+.goal-status-hit { color: var(--accent); }
+.goal-status-short { color: var(--negative); }
 
 .settings-field {
   display: flex;
