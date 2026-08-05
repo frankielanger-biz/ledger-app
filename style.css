@@ -1110,6 +1110,17 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
   margin-bottom: 12px;
 }
 
+.section-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.section-label-row .section-label {
+  margin-bottom: 0;
+}
+
 .section-label span {
   color: var(--ink-dim);
   font-family: var(--font-mono);

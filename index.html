@@ -128,12 +128,12 @@
 
     <header class="topbar">
       <span id="topbar-status" class="topbar-status"></span>
-      <button id="discrete-toggle-btn" class="icon-btn" title="Discrete mode">
-        <svg id="eye-open-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <button class="icon-btn discrete-toggle-btn" title="Discrete mode">
+        <svg class="eye-open-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
           <circle cx="12" cy="12" r="3"></circle>
         </svg>
-        <svg id="eye-closed-icon" class="hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="eye-closed-icon hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
           <line x1="1" y1="1" x2="23" y2="23"></line>
         </svg>
@@ -238,7 +238,19 @@
   <section class="screen tab-panel hidden" data-panel="manage">
 
     <section class="accounts">
-      <div class="section-label">Accounts</div>
+      <div class="section-label-row">
+        <div class="section-label">Accounts</div>
+        <button class="icon-btn discrete-toggle-btn" title="Discrete mode">
+          <svg class="eye-open-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+          <svg class="eye-closed-icon hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+            <line x1="1" y1="1" x2="23" y2="23"></line>
+          </svg>
+        </button>
+      </div>
       <div id="accounts-list" class="accounts-list"></div>
       <button id="connect-btn" class="connect-btn">+ Connect a bank</button>
     </section>
@@ -567,8 +579,7 @@
         <label class="checkbox-row"><input type="checkbox" data-check="beneficiaries" /><span>Beneficiaries are up to date on my accounts</span></label>
         <label class="checkbox-row"><input type="checkbox" data-check="life" /><span>I have life insurance, if I have dependents</span></label>
         <label class="checkbox-row"><input type="checkbox" data-check="health" /><span>I have health insurance</span></label>
-        <label class="checkbox-row"><input type="checkbox" data-check="disability" /><span>I have disability insurance</span></label>
-        <label class="checkbox-row"><input type="checkbox" id="insurance-none-check" /><span>I don't have any of these things</span></label>
+        <label class="checkbox-row"><input type="checkbox" id="insurance-none-check" /><span>I don't have any of these, or I don't know</span></label>
       </div>
       <div id="insurance-book-call-prompt" class="attention-banner hidden">
         <span>Would you like to book a call?</span>

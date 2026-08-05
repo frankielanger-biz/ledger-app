@@ -92,9 +92,9 @@ const percentileLineEl = document.getElementById("percentile-line");
 const emergencyFundBarEl = document.getElementById("emergency-fund-bar");
 const emergencyFundCaptionEl = document.getElementById("emergency-fund-caption");
 const subscriptionListEl = document.getElementById("subscription-list");
-const discreteToggleBtnEl = document.getElementById("discrete-toggle-btn");
-const eyeOpenIconEl = document.getElementById("eye-open-icon");
-const eyeClosedIconEl = document.getElementById("eye-closed-icon");
+const discreteToggleBtnEls = document.querySelectorAll(".discrete-toggle-btn");
+const eyeOpenIconEls = document.querySelectorAll(".eye-open-icon");
+const eyeClosedIconEls = document.querySelectorAll(".eye-closed-icon");
 const bookCallTopicEl = document.getElementById("book-call-topic");
 const bookCallBtnEl = document.getElementById("book-call-btn");
 const faqQuestionInputEl = document.getElementById("faq-question-input");
@@ -673,16 +673,20 @@ function renderBalances(data) {
   }
 }
 
-discreteToggleBtnEl.addEventListener("click", () => {
-  discreteMode = !discreteMode;
-  discreteToggleBtnEl.classList.toggle("active", discreteMode);
-  eyeOpenIconEl.classList.toggle("hidden", discreteMode);
-  eyeClosedIconEl.classList.toggle("hidden", !discreteMode);
-  if (latestBalances) renderBalances(latestBalances);
+function applyDiscreteModeToButtons() {
+  discreteToggleBtnEls.forEach((btn) => btn.classList.toggle("active", discreteMode));
+  eyeOpenIconEls.forEach((icon) => icon.classList.toggle("hidden", discreteMode));
+  eyeClosedIconEls.forEach((icon) => icon.classList.toggle("hidden", !discreteMode));
+}
+
+discreteToggleBtnEls.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    discreteMode = !discreteMode;
+    applyDiscreteModeToButtons();
+    if (latestBalances) renderBalances(latestBalances);
+  });
 });
-discreteToggleBtnEl.classList.add("active");
-eyeOpenIconEl.classList.add("hidden");
-eyeClosedIconEl.classList.remove("hidden");
+applyDiscreteModeToButtons();
 
 refreshBtn.addEventListener("click", loadEverything);
 
@@ -1315,19 +1319,19 @@ function renderTrajectoryGraph(data, baseGrowthPerDay, extraSavings, extraInvest
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // Adjusted projection (solid, with extra savings/investing)
-  if (hasExtra) {
-    ctx.beginPath();
-    ctx.strokeStyle = "#D9A24F";
-    ctx.lineWidth = 2;
-    adjustedSeries.forEach((v, m) => {
-      const x = xForMonth(m);
-      const y = yFor(v);
-      if (m === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-  }
+  // Adjusted projection (solid gold). Always drawn, even at $0 extra, so
+  // the graph reads as two lines from the start; it'll sit on top of the
+  // baseline until the person enters a savings/investing amount.
+  ctx.beginPath();
+  ctx.strokeStyle = "#D9A24F";
+  ctx.lineWidth = 2;
+  adjustedSeries.forEach((v, m) => {
+    const x = xForMonth(m);
+    const y = yFor(v);
+    if (m === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
 
   // Save enough state to answer "what's the value at this x position" for
   // the tap-and-hold tooltip, without re-running all the math on every move.
