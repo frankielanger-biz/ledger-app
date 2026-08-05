@@ -459,6 +459,14 @@
 
   <!-- ===================== RESOURCES TAB (education content lives here) ===================== -->
   <section class="page-panel tab-panel hidden" data-panel="resources">
+    <div class="ask-question-box">
+      <div class="resource-card-title">What do you want to learn about?</div>
+      <div class="faq-response-note">I'll respond to you directly, generally within 1-2 business days.</div>
+      <textarea id="resources-question-input" placeholder="Type your question…" rows="3"></textarea>
+      <button id="resources-question-submit" class="book-call-btn manual-submit-btn">Submit</button>
+      <div id="resources-question-status" class="dashboard-status"></div>
+    </div>
+
     <div class="resource-bucket-label">Equities and investments</div>
 
     <div class="resource-card">
@@ -560,6 +568,11 @@
         <label class="checkbox-row"><input type="checkbox" data-check="life" /><span>I have life insurance, if I have dependents</span></label>
         <label class="checkbox-row"><input type="checkbox" data-check="health" /><span>I have health insurance</span></label>
         <label class="checkbox-row"><input type="checkbox" data-check="disability" /><span>I have disability insurance</span></label>
+        <label class="checkbox-row"><input type="checkbox" id="insurance-none-check" /><span>I don't have any of these things</span></label>
+      </div>
+      <div id="insurance-book-call-prompt" class="attention-banner hidden">
+        <span>Would you like to book a call?</span>
+        <button id="insurance-book-call-btn" class="attention-banner-btn">Book a call</button>
       </div>
     </div>
   </section>

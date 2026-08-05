@@ -3,7 +3,7 @@
 // installs cleanly and opens instantly. It does NOT cache API responses —
 // your balances should always come in fresh from get-balances.
 
-const CACHE_NAME = "ledger-shell-v31";
+const CACHE_NAME = "ledger-shell-v32";
 const SHELL_FILES = [
   "./",
   "./index.html",

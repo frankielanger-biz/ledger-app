@@ -103,6 +103,9 @@ const faqQuestionStatusEl = document.getElementById("faq-question-status");
 const amaQuestionInputEl = document.getElementById("ama-question-input");
 const amaQuestionSubmitEl = document.getElementById("ama-question-submit");
 const amaQuestionStatusEl = document.getElementById("ama-question-status");
+const resourcesQuestionInputEl = document.getElementById("resources-question-input");
+const resourcesQuestionSubmitEl = document.getElementById("resources-question-submit");
+const resourcesQuestionStatusEl = document.getElementById("resources-question-status");
 const settingsFirstNameEl = document.getElementById("settings-first-name");
 const settingsLastNameEl = document.getElementById("settings-last-name");
 const settingsEmailEl = document.getElementById("settings-email");
@@ -645,12 +648,26 @@ function renderBalances(data) {
     row.className = "account-row";
     const isLiability = acct.type === "credit" || acct.type === "loan";
     const displayBalance = isLiability ? -Math.abs(acct.current ?? 0) : acct.current ?? 0;
+
+    let changeArrow = "";
+    if (acct.change_since_last !== null && acct.change_since_last !== undefined && acct.change_since_last !== 0) {
+      // For liabilities, a balance going up is worse, not better, so flip
+      // the color even though the arrow direction still follows the number.
+      const raw = acct.change_since_last;
+      const isGoodChange = isLiability ? raw < 0 : raw > 0;
+      const arrowChar = raw > 0 ? "▲" : "▼";
+      changeArrow = `<span class="account-change ${isGoodChange ? "positive" : "negative"}">${arrowChar} ${discreteMode ? "••" : formatMoney(Math.abs(raw))}</span>`;
+    }
+
     row.innerHTML = `
       <div class="account-meta">
         <span class="account-name">${acct.name}</span>
         <span class="account-institution">${acct.institution_name ?? ""}</span>
       </div>
-      <span class="account-balance ${displayBalance < 0 ? "negative" : ""}">${discreteMode ? "••••" : formatMoney(displayBalance)}</span>
+      <div class="account-balance-wrap">
+        <span class="account-balance ${displayBalance < 0 ? "negative" : ""}">${discreteMode ? "••••" : formatMoney(displayBalance)}</span>
+        ${changeArrow}
+      </div>
     `;
     accountsListEl.appendChild(row);
   }
@@ -1239,6 +1256,7 @@ function renderTrajectoryGraph(data, baseGrowthPerDay, extraSavings, extraInvest
     ctx.fillStyle = "#7C948A";
     ctx.textBaseline = "middle";
     ctx.fillText("Need a bit more history to project this.", 10, height / 2);
+    trajectoryChartState = null;
     return;
   }
 
@@ -1310,7 +1328,100 @@ function renderTrajectoryGraph(data, baseGrowthPerDay, extraSavings, extraInvest
     });
     ctx.stroke();
   }
+
+  // Save enough state to answer "what's the value at this x position" for
+  // the tap-and-hold tooltip, without re-running all the math on every move.
+  trajectoryChartState = {
+    width,
+    height,
+    padding,
+    totalUnits,
+    history,
+    baselineSeries,
+    adjustedSeries,
+    hasExtra,
+    lastDate: new Date(lastPoint.created_at),
+  };
 }
+
+let trajectoryChartState = null;
+let trajectoryTooltipActive = false;
+
+function drawTrajectoryTooltip(clientX) {
+  if (!trajectoryChartState) return;
+  const { width, height, padding, totalUnits, history, baselineSeries, adjustedSeries, hasExtra, lastDate } =
+    trajectoryChartState;
+  const canvas = forecastTrajectoryCanvasEl;
+  const rect = canvas.getBoundingClientRect();
+  const relX = clamp(clientX - rect.left, padding, width - padding);
+  const unit = ((relX - padding) / (width - padding * 2)) * totalUnits;
+
+  let label, value;
+  if (unit <= history.length - 1) {
+    const i = Math.round(clamp(unit, 0, history.length - 1));
+    const point = history[i];
+    label = new Date(point.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    value = point.net_worth;
+  } else {
+    const m = Math.round(unit - (history.length - 1));
+    const projDate = new Date(lastDate);
+    projDate.setMonth(projDate.getMonth() + m);
+    label = projDate.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    value = hasExtra ? adjustedSeries[m] : baselineSeries[m];
+  }
+
+  // Redraw the base chart, then overlay the crosshair + tooltip on top.
+  updateForecast(latestBalances);
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  ctx.beginPath();
+  ctx.strokeStyle = "#7C948A";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.moveTo(relX, 0);
+  ctx.lineTo(relX, height);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const boxText = `${label}  ${formatMoney(value)}`;
+  ctx.font = "12px Manrope, sans-serif";
+  const textWidth = ctx.measureText(boxText).width;
+  const boxX = clamp(relX - textWidth / 2 - 8, 2, width - textWidth - 18);
+
+  ctx.fillStyle = "rgba(15, 23, 20, 0.92)";
+  ctx.fillRect(boxX, 6, textWidth + 16, 22);
+  ctx.fillStyle = "#E8F2EC";
+  ctx.textBaseline = "middle";
+  ctx.fillText(boxText, boxX + 8, 17);
+}
+
+function bindTrajectoryTooltipEvents() {
+  const canvas = forecastTrajectoryCanvasEl;
+
+  const start = (clientX) => {
+    trajectoryTooltipActive = true;
+    drawTrajectoryTooltip(clientX);
+  };
+  const move = (clientX) => {
+    if (trajectoryTooltipActive) drawTrajectoryTooltip(clientX);
+  };
+  const end = () => {
+    if (!trajectoryTooltipActive) return;
+    trajectoryTooltipActive = false;
+    updateForecast(latestBalances);
+  };
+
+  canvas.addEventListener("touchstart", (e) => start(e.touches[0].clientX), { passive: true });
+  canvas.addEventListener("touchmove", (e) => move(e.touches[0].clientX), { passive: true });
+  canvas.addEventListener("touchend", end);
+  canvas.addEventListener("mousedown", (e) => start(e.clientX));
+  canvas.addEventListener("mousemove", (e) => move(e.clientX));
+  window.addEventListener("mouseup", end);
+}
+
+bindTrajectoryTooltipEvents();
 
 // ---------------------------------------------------------------
 // "Invest instead" comparison — grounded in a real ticker's current price.
@@ -1709,13 +1820,46 @@ applyComplexInvestState();
 // Insurance/estate checklist — saved locally, educational only
 // ---------------------------------------------------------------
 
-document.querySelectorAll("#insurance-checklist input[type='checkbox']").forEach((box) => {
+const insuranceNoneCheckEl = document.getElementById("insurance-none-check");
+const insuranceBookCallPromptEl = document.getElementById("insurance-book-call-prompt");
+const insuranceBookCallBtnEl = document.getElementById("insurance-book-call-btn");
+const insuranceRealChecksEl = document.querySelectorAll("#insurance-checklist input[data-check]");
+
+function updateInsuranceBookCallPrompt() {
+  const anyRealChecked = Array.from(insuranceRealChecksEl).some((box) => box.checked);
+  insuranceBookCallPromptEl.classList.toggle("hidden", !anyRealChecked);
+}
+
+insuranceRealChecksEl.forEach((box) => {
   const key = `ledger_checklist_${box.dataset.check}`;
   box.checked = localStorage.getItem(key) === "true";
   box.addEventListener("change", () => {
     localStorage.setItem(key, box.checked);
+    if (box.checked) {
+      insuranceNoneCheckEl.checked = false;
+      localStorage.setItem("ledger_checklist_none", "false");
+    }
+    updateInsuranceBookCallPrompt();
   });
 });
+
+insuranceNoneCheckEl.checked = localStorage.getItem("ledger_checklist_none") === "true";
+insuranceNoneCheckEl.addEventListener("change", () => {
+  localStorage.setItem("ledger_checklist_none", insuranceNoneCheckEl.checked);
+  if (insuranceNoneCheckEl.checked) {
+    insuranceRealChecksEl.forEach((box) => {
+      box.checked = false;
+      localStorage.setItem(`ledger_checklist_${box.dataset.check}`, "false");
+    });
+  }
+  updateInsuranceBookCallPrompt();
+});
+
+insuranceBookCallBtnEl.addEventListener("click", () => {
+  document.querySelector('.topnav-tab[data-tab="book-call"]').click();
+});
+
+updateInsuranceBookCallPrompt();
 
 // ---------------------------------------------------------------
 // PWA — register service worker for installability/offline shell
@@ -1765,6 +1909,16 @@ amaQuestionSubmitEl.addEventListener("click", () => {
   window.location.href = `mailto:${BOOKING_EMAIL}?subject=${subject}&body=${body}`;
   amaQuestionInputEl.value = "";
   amaQuestionStatusEl.textContent = "Your question has been submitted. You'll hear back within 1-2 business days.";
+});
+
+resourcesQuestionSubmitEl.addEventListener("click", () => {
+  const question = resourcesQuestionInputEl.value.trim();
+  if (!question) return;
+  const subject = encodeURIComponent("Ledger question — Resources");
+  const body = encodeURIComponent(question);
+  window.location.href = `mailto:${BOOKING_EMAIL}?subject=${subject}&body=${body}`;
+  resourcesQuestionInputEl.value = "";
+  resourcesQuestionStatusEl.textContent = "Your question has been submitted. You'll hear back within 1-2 business days.";
 });
 
 // ---------------------------------------------------------------

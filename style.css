@@ -1144,6 +1144,21 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
 
 .account-balance.negative { color: var(--negative); }
 
+.account-balance-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.account-change {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.account-change.positive { color: var(--accent); }
+.account-change.negative { color: var(--negative); }
+
 .empty-state {
   color: var(--ink-dim);
   font-size: 15px;
