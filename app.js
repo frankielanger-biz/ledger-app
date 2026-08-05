@@ -24,8 +24,6 @@ const authFormEl = document.getElementById("auth-form");
 const authEmailEl = document.getElementById("auth-email");
 const authPasswordEl = document.getElementById("auth-password");
 const authSubmitBtnEl = document.getElementById("auth-submit-btn");
-const authSubmitSpinnerEl = document.getElementById("auth-submit-spinner");
-const authSubmitLabelEl = document.getElementById("auth-submit-label");
 const authStatusEl = document.getElementById("auth-status");
 const authToggleBtnEl = document.getElementById("auth-toggle-btn");
 const authTitleEl = document.getElementById("auth-title");
@@ -89,7 +87,6 @@ const manualCategoryEl = document.getElementById("manual-category");
 const manualSubmitBtnEl = document.getElementById("manual-submit-btn");
 const manualAddStatusEl = document.getElementById("manual-add-status");
 const ledgerBrandEl = document.querySelector(".topnav-brand");
-const returnToDashboardToggleEl = document.getElementById("settings-return-to-dashboard");
 
 // New feature elements
 const percentileLineEl = document.getElementById("percentile-line");
@@ -98,12 +95,6 @@ const emergencyFundCaptionEl = document.getElementById("emergency-fund-caption")
 const subscriptionListEl = document.getElementById("subscription-list");
 const debtPayoffListEl = document.getElementById("debt-payoff-list");
 const debtPayoffSummaryEl = document.getElementById("debt-payoff-summary");
-const watchlistListEl = document.getElementById("watchlist-list");
-const addWatchlistBtnEl = document.getElementById("add-watchlist-btn");
-const addWatchlistFormEl = document.getElementById("add-watchlist-form");
-const watchlistLabelEl = document.getElementById("watchlist-label");
-const watchlistAmountEl = document.getElementById("watchlist-amount");
-const watchlistSubmitBtnEl = document.getElementById("watchlist-submit-btn");
 const discreteToggleBtnEl = document.getElementById("discrete-toggle-btn");
 const eyeOpenIconEl = document.getElementById("eye-open-icon");
 const eyeClosedIconEl = document.getElementById("eye-closed-icon");
@@ -126,6 +117,7 @@ const settingsAccountsListEl = document.getElementById("settings-accounts-list")
 const inviteFriendsBtnEl = document.getElementById("invite-friends-btn");
 const inviteStatusEl = document.getElementById("invite-status");
 const settingsSaveStatusEl = document.getElementById("settings-save-status");
+const swipeContainerEl = document.getElementById("swipe-container");
 
 const BOOKING_EMAIL = "frankielanger@gmail.com";
 
@@ -204,12 +196,16 @@ const tabIntroDismissEl = document.getElementById("tab-intro-dismiss");
 const tabIntroSkipEl = document.getElementById("tab-intro-skip");
 const tabIntroStepEl = document.getElementById("tab-intro-step");
 
-// MVP trim (2026-08-02): walkthrough only tours the 5 live tabs.
 const WALKTHROUGH_ORDER = [
   "dashboard",
   "manage",
+  "discretionary",
+  "forecast",
   "book-call",
+  "faq",
+  "resources",
   "settings",
+  "beta",
 ];
 
 let walkthroughActive = false;
@@ -255,15 +251,17 @@ tabIntroSkipEl.addEventListener("click", endWalkthrough);
 
 document.getElementById("start-walkthrough-btn")?.addEventListener("click", startWalkthrough);
 
-// MVP trim (2026-08-02): only these 5 tabs are live in nav. The other 5
-// (discretionary, forecast, faq, resources, beta) still exist in the DOM
-// and their code is untouched — just not reachable from nav right now.
 const TAB_ORDER = [
   "getting-started",
   "dashboard",
   "manage",
+  "discretionary",
+  "forecast",
   "book-call",
+  "faq",
+  "resources",
   "settings",
+  "beta",
 ];
 
 function switchToTab(target, slideDirection) {
@@ -285,61 +283,16 @@ function switchToTab(target, slideDirection) {
 }
 
 tabButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const target = btn.dataset.tab;
-    const currentTab = document.querySelector(".topnav-tab.active")?.dataset.tab;
-    const fromIndex = TAB_ORDER.indexOf(currentTab);
-    const toIndex = TAB_ORDER.indexOf(target);
-    // Direction follows nav order, same convention as swipe: moving to a
-    // later tab slides in from the right, moving to an earlier tab slides
-    // in from the left. Tabs outside TAB_ORDER (e.g. reached via a direct
-    // .click() call elsewhere) just fall back to no animation.
-    const slideDirection =
-      fromIndex === -1 || toIndex === -1 || fromIndex === toIndex
-        ? undefined
-        : toIndex > fromIndex
-        ? "left"
-        : "right";
-    switchToTab(target, slideDirection);
-  });
+  btn.addEventListener("click", () => switchToTab(btn.dataset.tab));
 });
 
-// ---------------------------------------------------------------
-// "Return to Dashboard after actions" — a single setting that controls
-// whether completing an action (connecting a bank, adding a manual item,
-// disconnecting a bank) always lands the user back on the Dashboard tab.
-// Defaults to on, since that was already the behavior for bank connects;
-// this just makes it consistent across the other action flows too, and
-// gives Frankie a way to turn it off if it feels heavy-handed later.
-// ---------------------------------------------------------------
-
-const RETURN_TO_DASHBOARD_KEY = "ledger_return_to_dashboard";
-
-function returnToDashboardIfEnabled() {
-  const enabled = localStorage.getItem(RETURN_TO_DASHBOARD_KEY) !== "false";
-  if (!enabled) return;
-  document.querySelector('.topnav-tab[data-tab="dashboard"]').click();
-}
-
-if (returnToDashboardToggleEl) {
-  returnToDashboardToggleEl.checked = localStorage.getItem(RETURN_TO_DASHBOARD_KEY) !== "false";
-  returnToDashboardToggleEl.addEventListener("change", () => {
-    localStorage.setItem(RETURN_TO_DASHBOARD_KEY, returnToDashboardToggleEl.checked);
-  });
-}
-
-// Swipe left/right between tabs. Scoped to the top nav bar only — a swipe
-// must start there, not over tile content below, so it doesn't fight with
-// scrolling or interacting with dashboard tiles, charts, and forms.
+// Swipe left/right between tabs, in nav order.
 let touchStartX = 0;
 let touchStartY = 0;
-let touchStartedOnNav = false;
 
 document.addEventListener(
   "touchstart",
   (e) => {
-    touchStartedOnNav = !!e.target.closest(".topnav");
-    if (!touchStartedOnNav) return;
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
   },
@@ -349,7 +302,6 @@ document.addEventListener(
 document.addEventListener(
   "touchend",
   (e) => {
-    if (!touchStartedOnNav) return;
     const deltaX = e.changedTouches[0].clientX - touchStartX;
     const deltaY = e.changedTouches[0].clientY - touchStartY;
     const SWIPE_THRESHOLD = 60;
@@ -386,6 +338,43 @@ document.getElementById("attention-banner-btn").addEventListener("click", () => 
     setTimeout(() => connectBtn.click(), 300);
   }
 });
+
+// ---------------------------------------------------------------
+// Swipe left/right to move between tabs, in nav order
+// ---------------------------------------------------------------
+
+let swipeStartX = null;
+let swipeStartY = null;
+
+swipeContainerEl.addEventListener(
+  "touchstart",
+  (e) => {
+    swipeStartX = e.touches[0].clientX;
+    swipeStartY = e.touches[0].clientY;
+  },
+  { passive: true }
+);
+
+swipeContainerEl.addEventListener(
+  "touchend",
+  (e) => {
+    if (swipeStartX === null) return;
+    const deltaX = e.changedTouches[0].clientX - swipeStartX;
+    const deltaY = e.changedTouches[0].clientY - swipeStartY;
+
+    // Require a clearly horizontal swipe so vertical scrolling isn't hijacked.
+    if (Math.abs(deltaX) > 60 && Math.abs(deltaX) > Math.abs(deltaY) * 2) {
+      const buttons = Array.from(tabButtons);
+      const currentIdx = buttons.findIndex((b) => b.classList.contains("active"));
+      const nextIdx = deltaX < 0 ? currentIdx + 1 : currentIdx - 1;
+      if (nextIdx >= 0 && nextIdx < buttons.length) buttons[nextIdx].click();
+    }
+
+    swipeStartX = null;
+    swipeStartY = null;
+  },
+  { passive: true }
+);
 
 // ---------------------------------------------------------------
 // Pull-to-refresh — only triggers when already at the top of the page,
@@ -494,7 +483,7 @@ async function handlePlaidSuccess(public_token, metadata) {
     });
     dashboardStatus.textContent = "";
     showToast(`${metadata.institution?.name ?? "Bank"} connected`);
-    returnToDashboardIfEnabled();
+    document.querySelector('.topnav-tab[data-tab="dashboard"]').click();
     await loadEverything();
   } catch (err) {
     dashboardStatus.textContent = `Couldn't finish connecting: ${err.message}`;
@@ -1584,7 +1573,6 @@ manualSubmitBtnEl.addEventListener("click", async () => {
     manualAddStatusEl.textContent = "Added.";
     addManualFormEl.classList.add("hidden");
     showToast(`${label} added`);
-    returnToDashboardIfEnabled();
     await loadEverything();
   } catch (err) {
     manualAddStatusEl.textContent = `Couldn't add it: ${err.message}`;
@@ -1626,23 +1614,61 @@ function renderPercentile(data) {
 }
 
 // ---------------------------------------------------------------
-// Emergency fund tracker — runway vs. a standard 6-month benchmark
+// Emergency fund tracker — defaults to a standard 6-month benchmark,
+// but the user can click it and set their own dollar target instead.
 // ---------------------------------------------------------------
 
 function renderEmergencyFund(data) {
-  if (!data || !latestTransactions?.fixed_spend_30d) {
+  if (!data) {
     emergencyFundCaptionEl.textContent = "Needs a bit more transaction history to calculate.";
     emergencyFundBarEl.style.width = "0%";
     return;
   }
 
-  const months = data.liquid_cash / latestTransactions.fixed_spend_30d;
+  const customTarget = parseFloat(localStorage.getItem("ledger_emergency_fund_target"));
+  const liquidCash = data.liquid_cash ?? 0;
+
+  if (customTarget > 0) {
+    const pct = clamp((liquidCash / customTarget) * 100, 0, 100);
+    emergencyFundBarEl.style.width = `${pct}%`;
+    emergencyFundCaptionEl.textContent = `${formatMoney(liquidCash)} of your ${formatMoney(customTarget)} target`;
+    return;
+  }
+
+  if (!latestTransactions?.fixed_spend_30d) {
+    emergencyFundCaptionEl.textContent = "Needs a bit more transaction history to calculate, or tap to set your own target.";
+    emergencyFundBarEl.style.width = "0%";
+    return;
+  }
+
+  const months = liquidCash / latestTransactions.fixed_spend_30d;
   const targetMonths = 6;
   const pct = clamp((months / targetMonths) * 100, 0, 100);
 
   emergencyFundBarEl.style.width = `${pct}%`;
-  emergencyFundCaptionEl.textContent = `${months.toFixed(1)} of ${targetMonths} months covered (standard emergency-fund target)`;
+  emergencyFundCaptionEl.textContent = `${months.toFixed(1)} of ${targetMonths} months covered (standard emergency-fund target, tap to set your own)`;
 }
+
+const emergencyFundEditFormEl = document.getElementById("emergency-fund-edit-form");
+const emergencyFundTargetInputEl = document.getElementById("emergency-fund-target-input");
+const emergencyFundSaveBtnEl = document.getElementById("emergency-fund-save-btn");
+
+document.getElementById("emergency-fund-bar-wrap").addEventListener("click", () => {
+  const saved = localStorage.getItem("ledger_emergency_fund_target");
+  if (saved) emergencyFundTargetInputEl.value = saved;
+  emergencyFundEditFormEl.classList.toggle("hidden");
+});
+
+emergencyFundSaveBtnEl.addEventListener("click", () => {
+  const val = parseFloat(emergencyFundTargetInputEl.value);
+  if (val > 0) {
+    localStorage.setItem("ledger_emergency_fund_target", val);
+  } else {
+    localStorage.removeItem("ledger_emergency_fund_target");
+  }
+  emergencyFundEditFormEl.classList.add("hidden");
+  renderEmergencyFund(latestBalances);
+});
 
 // ---------------------------------------------------------------
 // Subscription audit — real recurring-charge detection using a 90-day
@@ -1734,83 +1760,12 @@ async function loadDebtPayoff() {
 }
 
 // ---------------------------------------------------------------
-// Purchase watchlist — saved locally on this device
-// ---------------------------------------------------------------
-
-function getWatchlist() {
-  try {
-    return JSON.parse(localStorage.getItem("ledger_watchlist") ?? "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveWatchlist(list) {
-  localStorage.setItem("ledger_watchlist", JSON.stringify(list));
-}
-
-function renderWatchlist() {
-  const list = getWatchlist();
-  if (list.length === 0) {
-    watchlistListEl.innerHTML = `<div class="empty-state">Nothing on your watchlist yet.</div>`;
-    return;
-  }
-
-  watchlistListEl.innerHTML = list
-    .map((item, i) => {
-      const pctOfLiquid = latestBalances ? ((item.amount / latestBalances.liquid_cash) * 100).toFixed(0) : null;
-      return `
-        <div class="watchlist-row">
-          <div class="watchlist-row-meta">
-            <span>${item.label}</span>
-            <span class="debt-row-sub">${formatMoney(item.amount)}${pctOfLiquid !== null ? " · " + pctOfLiquid + "% of liquid cash" : ""}</span>
-          </div>
-          <button class="watchlist-remove-btn" data-idx="${i}">Remove</button>
-        </div>`;
-    })
-    .join("");
-
-  watchlistListEl.querySelectorAll(".watchlist-remove-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const list = getWatchlist();
-      list.splice(parseInt(btn.dataset.idx, 10), 1);
-      saveWatchlist(list);
-      renderWatchlist();
-    });
-  });
-}
-
-addWatchlistBtnEl.addEventListener("click", () => {
-  addWatchlistFormEl.classList.toggle("hidden");
-});
-
-watchlistSubmitBtnEl.addEventListener("click", () => {
-  const label = watchlistLabelEl.value.trim();
-  const amount = parseFloat(watchlistAmountEl.value);
-  if (!label || isNaN(amount) || amount <= 0) return;
-
-  const list = getWatchlist();
-  list.push({ label, amount });
-  saveWatchlist(list);
-  watchlistLabelEl.value = "";
-  watchlistAmountEl.value = "";
-  addWatchlistFormEl.classList.add("hidden");
-  showToast(`${label} added to watchlist`);
-  renderWatchlist();
-});
-
-renderWatchlist();
-
-// ---------------------------------------------------------------
-// Complex investments question (Getting Started) — gates the
-// advanced manual-item categories so beginners aren't shown them
+// Complex investments question (Getting Started) — records the answer
+// only, doesn't unlock or reveal anything in Manage.
 // ---------------------------------------------------------------
 
 function applyComplexInvestState() {
   const has = localStorage.getItem("ledger_has_complex_investments") === "true";
-  document.querySelectorAll(".advanced-category").forEach((opt) => {
-    opt.hidden = !has;
-  });
   document.getElementById("complex-invest-yes")?.classList.toggle("active", has);
   document.getElementById("complex-invest-no")?.classList.toggle(
     "active",
@@ -1821,7 +1776,6 @@ function applyComplexInvestState() {
 document.getElementById("complex-invest-yes")?.addEventListener("click", () => {
   localStorage.setItem("ledger_has_complex_investments", "true");
   applyComplexInvestState();
-  showToast("Advanced categories added to Manage");
 });
 
 document.getElementById("complex-invest-no")?.addEventListener("click", () => {
@@ -1832,7 +1786,6 @@ document.getElementById("complex-invest-no")?.addEventListener("click", () => {
 document.getElementById("complex-invest-unsure")?.addEventListener("click", () => {
   localStorage.setItem("ledger_has_complex_investments", "false");
   applyComplexInvestState();
-  showToast("Got it, you can change this anytime");
 });
 
 applyComplexInvestState();
@@ -1971,8 +1924,6 @@ function renderSettingsAccounts(data) {
       btn.textContent = "Disconnecting…";
       try {
         await callFunction("disconnect-item", { item_id: btn.dataset.itemId });
-        showToast("Bank disconnected");
-        returnToDashboardIfEnabled();
         await loadEverything();
       } catch (err) {
         btn.textContent = "Failed";
@@ -2023,7 +1974,7 @@ signOutBtnEl.addEventListener("click", async () => {
 authToggleBtnEl.addEventListener("click", () => {
   authMode = authMode === "signin" ? "signup" : "signin";
   authTitleEl.textContent = authMode === "signin" ? "Welcome back" : "Create your account";
-  authSubmitLabelEl.textContent = authMode === "signin" ? "Sign in" : "Sign up";
+  authSubmitBtnEl.textContent = authMode === "signin" ? "Sign in" : "Sign up";
   authToggleBtnEl.textContent =
     authMode === "signin" ? "Don't have an account? Sign up" : "Already have an account? Sign in";
   authStatusEl.textContent = "";
@@ -2038,7 +1989,6 @@ authToggleBtnEl.addEventListener("click", () => {
 authFormEl.addEventListener("submit", async (e) => {
   e.preventDefault();
   authSubmitBtnEl.disabled = true;
-  authSubmitSpinnerEl.classList.remove("hidden");
   authStatusEl.textContent = authMode === "signin" ? "Signing in…" : "Creating your account…";
 
   const email = authEmailEl.value.trim();
@@ -2057,7 +2007,6 @@ authFormEl.addEventListener("submit", async (e) => {
       : await supabaseClient.auth.signUp({ email, password });
 
   authSubmitBtnEl.disabled = false;
-  authSubmitSpinnerEl.classList.add("hidden");
 
   if (error) {
     if (wasSigningUp) justSignedUp = false;

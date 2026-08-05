@@ -29,10 +29,7 @@
       <form id="auth-form">
         <input type="email" id="auth-email" placeholder="you@email.com" required autocomplete="email" />
         <input type="password" id="auth-password" placeholder="Password" required autocomplete="current-password" minlength="6" />
-        <button type="submit" id="auth-submit-btn">
-          <span id="auth-submit-spinner" class="btn-spinner hidden"></span>
-          <span id="auth-submit-label">Sign in</span>
-        </button>
+        <button type="submit" id="auth-submit-btn">Sign in</button>
       </form>
       <p id="auth-status" class="auth-status"></p>
       <button id="auth-toggle-btn" class="auth-toggle-btn">Don't have an account? Sign up</button>
@@ -69,13 +66,13 @@
       <button class="topnav-tab" data-tab="getting-started">Getting Started</button>
       <button class="topnav-tab active" data-tab="dashboard">Dashboard</button>
       <button class="topnav-tab" data-tab="manage">Manage</button>
-      <button class="topnav-tab dormant-tab" data-tab="discretionary">Discretionary</button>
-      <button class="topnav-tab dormant-tab" data-tab="forecast">Forecast</button>
+      <button class="topnav-tab" data-tab="discretionary">Discretionary</button>
+      <button class="topnav-tab" data-tab="forecast">Forecast</button>
       <button class="topnav-tab" data-tab="book-call">Book a call</button>
-      <button class="topnav-tab dormant-tab" data-tab="faq">FAQ</button>
-      <button class="topnav-tab dormant-tab" data-tab="resources">Resources</button>
+      <button class="topnav-tab" data-tab="faq">FAQ</button>
+      <button class="topnav-tab" data-tab="resources">Resources</button>
       <button class="topnav-tab" data-tab="settings">Settings</button>
-      <button class="topnav-tab dormant-tab" data-tab="beta">In Progress</button>
+      <button class="topnav-tab" data-tab="beta">In Progress</button>
     </div>
   </nav>
 
@@ -98,14 +95,6 @@
         everything you own against everything you owe, so you can check your real financial
         position before you make a decision, not after. The goal is to help you spend, save, and
         make money better.
-      </div>
-    </div>
-
-    <div class="resource-card">
-      <div class="resource-card-title">How to start</div>
-      <div class="resource-card-desc">
-        Head to the Manage tab and connect a bank (Chase for now, more coming). Your dashboard
-        fills in automatically from there.
       </div>
     </div>
 
@@ -228,10 +217,17 @@
 
     <section class="mini-stat-section">
       <div class="section-label">Emergency fund</div>
-      <div id="emergency-fund-bar-wrap" class="progress-bar-wrap">
+      <div id="emergency-fund-bar-wrap" class="progress-bar-wrap emergency-fund-clickable">
         <div id="emergency-fund-bar" class="progress-bar-fill"></div>
       </div>
       <div id="emergency-fund-caption" class="mini-stat-caption"></div>
+      <div id="emergency-fund-edit-form" class="add-manual-form hidden">
+        <div class="check-input-row">
+          <span class="dollar-sign">$</span>
+          <input type="number" id="emergency-fund-target-input" inputmode="decimal" placeholder="Your target amount" />
+        </div>
+        <button id="emergency-fund-save-btn" class="book-call-btn manual-submit-btn">Save target</button>
+      </div>
     </section>
 
     <p id="dashboard-status" class="dashboard-status"></p>
@@ -267,6 +263,36 @@
         <button id="manual-submit-btn" class="book-call-btn manual-submit-btn">Add it</button>
         <div id="manual-add-status" class="dashboard-status"></div>
       </div>
+    </section>
+
+    <section class="debt-payoff-section">
+      <div class="section-label">Debt payoff comparison</div>
+      <div id="debt-payoff-list" class="debt-payoff-list"></div>
+      <div id="debt-payoff-summary" class="mini-stat-caption"></div>
+    </section>
+
+  </section>
+
+  <!-- ===================== DISCRETIONARY TAB ===================== -->
+  <section class="screen tab-panel hidden" data-panel="discretionary">
+
+    <section class="check-block">
+      <div class="check-label">New purchase impact</div>
+      <div class="check-input-row">
+        <span class="dollar-sign">$</span>
+        <input type="number" id="afford-input" inputmode="decimal" placeholder="0" />
+      </div>
+      <select id="afford-category" class="afford-category-select">
+        <option value="">What kind of spend is this?</option>
+        <option value="housing">Housing</option>
+        <option value="utilities">Utilities</option>
+        <option value="subscription">Subscription</option>
+        <option value="discretionary">General discretionary</option>
+        <option value="need">General need</option>
+        <option value="investment">Investment</option>
+        <option value="other">Other</option>
+      </select>
+      <div id="afford-result" class="afford-result"></div>
     </section>
 
     <section class="invest-section">
@@ -314,50 +340,6 @@
           </select>
         </div>
         <div id="invest-result" class="invest-result"></div>
-      </div>
-    </section>
-
-    <section class="debt-payoff-section">
-      <div class="section-label">Debt payoff comparison</div>
-      <div id="debt-payoff-list" class="debt-payoff-list"></div>
-      <div id="debt-payoff-summary" class="mini-stat-caption"></div>
-    </section>
-
-  </section>
-
-  <!-- ===================== DISCRETIONARY TAB ===================== -->
-  <section class="screen tab-panel hidden" data-panel="discretionary">
-
-    <section class="check-block">
-      <div class="check-label">New purchase impact</div>
-      <div class="check-input-row">
-        <span class="dollar-sign">$</span>
-        <input type="number" id="afford-input" inputmode="decimal" placeholder="0" />
-      </div>
-      <select id="afford-category" class="afford-category-select">
-        <option value="">What kind of spend is this?</option>
-        <option value="housing">Housing</option>
-        <option value="utilities">Utilities</option>
-        <option value="subscription">Subscription</option>
-        <option value="discretionary">General discretionary</option>
-        <option value="need">General need</option>
-        <option value="investment">Investment</option>
-        <option value="other">Other</option>
-      </select>
-      <div id="afford-result" class="afford-result"></div>
-    </section>
-
-    <section class="watchlist-section">
-      <div class="section-label">Purchase watchlist</div>
-      <div id="watchlist-list" class="watchlist-list"></div>
-      <button id="add-watchlist-btn" class="connect-btn">+ Add something you're saving for</button>
-      <div id="add-watchlist-form" class="add-manual-form hidden">
-        <input type="text" id="watchlist-label" placeholder="What is it? e.g. New laptop" />
-        <div class="check-input-row">
-          <span class="dollar-sign">$</span>
-          <input type="number" id="watchlist-amount" inputmode="decimal" placeholder="Target amount" />
-        </div>
-        <button id="watchlist-submit-btn" class="book-call-btn manual-submit-btn">Add it</button>
       </div>
     </section>
 
@@ -647,14 +629,6 @@
         <button class="theme-toggle-btn active" data-theme="dark">Dark</button>
         <button class="theme-toggle-btn" data-theme="light">Light</button>
       </div>
-    </div>
-
-    <div class="settings-divider"></div>
-
-    <div class="settings-section-label">Navigation</div>
-    <div class="settings-field settings-field-row checkbox-row">
-      <span>Return to Dashboard after actions</span>
-      <input type="checkbox" id="settings-return-to-dashboard" checked />
     </div>
 
     <div class="settings-divider"></div>
