@@ -1540,9 +1540,24 @@ button:not(.icon-btn):not(.topnav-tab):not(.theme-toggle-btn):active {
   transform: rotate(45deg);
 }
 
+.invest-section .checkbox-row {
+  margin-top: 20px;
+  padding: 6px 0;
+}
+
+.invest-section .checkbox-row input[type="checkbox"] {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+}
+
 .invest-section .checkbox-row span {
   font-size: 15px;
   color: var(--ink);
+}
+
+.invest-section #invest-inputs-wrap {
+  margin-top: 24px;
 }
 
 .percentile-line {

@@ -265,12 +265,6 @@
       </div>
     </section>
 
-    <section class="debt-payoff-section">
-      <div class="section-label">Debt payoff comparison</div>
-      <div id="debt-payoff-list" class="debt-payoff-list"></div>
-      <div id="debt-payoff-summary" class="mini-stat-caption"></div>
-    </section>
-
   </section>
 
   <!-- ===================== DISCRETIONARY TAB ===================== -->
@@ -343,12 +337,6 @@
       </div>
     </section>
 
-    <section class="subscription-section">
-      <div class="section-label">Subscription audit</div>
-      <div class="mini-stat-caption">Merchants that charged you 2+ times in the last 90 days.</div>
-      <div id="subscription-list" class="subscription-list"></div>
-    </section>
-
   </section>
 
   <!-- ===================== FORECAST TAB ===================== -->
@@ -392,15 +380,6 @@
       <div class="forecast-graph-block">
         <div class="section-label">Net worth trajectory (10-year projection)</div>
         <canvas id="forecast-trajectory-canvas"></canvas>
-        <div class="forecast-legend">
-          <span><i class="legend-dot legend-dot-actual"></i>What you're doing now</span>
-          <span><i class="legend-dot legend-dot-adjusted"></i>Your intended net worth</span>
-        </div>
-      </div>
-
-      <div class="forecast-graph-block">
-        <div class="section-label">Current spending, last 30 days</div>
-        <canvas id="forecast-spending-canvas" width="600" height="140"></canvas>
       </div>
     </section>
 
@@ -681,8 +660,13 @@
     </div>
 
     <div class="resource-card">
-      <div class="resource-card-title">Connect any bank</div>
-      <div class="resource-card-desc">Link an account directly with routing and account number, for banks Plaid doesn't cover yet.</div>
+      <div class="resource-card-title">More institution coverage</div>
+      <div class="resource-card-desc">Broader bank support beyond Chase. Needs a Plaid plan upgrade or a second data provider, routing/account numbers alone can't read balances.</div>
+    </div>
+
+    <div class="resource-card">
+      <div class="resource-card-title">Subscription audit</div>
+      <div class="resource-card-desc">Detects merchants that charged you 2+ times in 90 days. Pulled back for now, it's flagging one-off charges (like a brokerage clearing fee) alongside real recurring ones (like rent). Needs better detection before it comes back.</div>
     </div>
 
     <div class="resource-card">

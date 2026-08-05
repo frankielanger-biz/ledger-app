@@ -66,7 +66,6 @@ const goalNetWorthEl = document.getElementById("goal-net-worth-input");
 const forecastCurrentNetWorthEl = document.getElementById("forecast-current-net-worth");
 const goalResultEl = document.getElementById("goal-result");
 const forecastTrajectoryCanvasEl = document.getElementById("forecast-trajectory-canvas");
-const forecastSpendingCanvasEl = document.getElementById("forecast-spending-canvas");
 const investAmountEl = document.getElementById("invest-amount");
 const investYearsEl = document.getElementById("invest-years");
 const investCadenceEl = document.getElementById("invest-cadence");
@@ -93,8 +92,6 @@ const percentileLineEl = document.getElementById("percentile-line");
 const emergencyFundBarEl = document.getElementById("emergency-fund-bar");
 const emergencyFundCaptionEl = document.getElementById("emergency-fund-caption");
 const subscriptionListEl = document.getElementById("subscription-list");
-const debtPayoffListEl = document.getElementById("debt-payoff-list");
-const debtPayoffSummaryEl = document.getElementById("debt-payoff-summary");
 const discreteToggleBtnEl = document.getElementById("discrete-toggle-btn");
 const eyeOpenIconEl = document.getElementById("eye-open-icon");
 const eyeClosedIconEl = document.getElementById("eye-closed-icon");
@@ -278,6 +275,14 @@ function switchToTab(target, slideDirection) {
       void panel.offsetWidth;
       panel.classList.add(slideDirection === "left" ? "slide-in-left" : "slide-in-right");
     }
+  }
+  if (target === "forecast") {
+    // The trajectory canvas measures its own width to size itself. If that
+    // measurement happens while this tab is still hidden (e.g. during the
+    // initial page load), it reads 0 and the graph never draws until
+    // something else forces a re-render. Force one now that the tab is
+    // actually visible and has real dimensions.
+    updateForecast(latestBalances);
   }
   if (walkthroughActive) showWalkthroughStep(target);
 }
@@ -586,8 +591,8 @@ async function loadEverything() {
   }
 
   renderEmergencyFund(latestBalances);
-  loadSubscriptionAudit();
-  loadDebtPayoff();
+  // loadSubscriptionAudit(); — pulled from the UI for now, detection needs
+  // to stop flagging one-off charges as recurring before this comes back.
   renderScore();
   if (scoreFlipInnerEl.classList.contains("flipped")) loadSpendingForMonth();
   syncFlipHeight();
@@ -1142,7 +1147,6 @@ function updateForecast(data) {
 
   if (history.length < 2) {
     goalResultEl.textContent = "Need a bit more history to project a timeline.";
-    renderSpendingGraph();
     return;
   }
 
@@ -1195,7 +1199,6 @@ function updateForecast(data) {
   `;
 
   renderTrajectoryGraph(data, baseGrowthPerDay, extraSavings, extraInvesting);
-  renderSpendingGraph();
 }
 
 extraSavingsEl.addEventListener("input", () => {
@@ -1307,45 +1310,6 @@ function renderTrajectoryGraph(data, baseGrowthPerDay, extraSavings, extraInvest
     });
     ctx.stroke();
   }
-}
-
-// ---------------------------------------------------------------
-// Current spending graph — simple bar chart by category, last 30 days
-// ---------------------------------------------------------------
-
-function renderSpendingGraph() {
-  const canvas = forecastSpendingCanvasEl;
-  const ctx = canvas.getContext("2d");
-  const width = canvas.width;
-  const height = canvas.height;
-  ctx.clearRect(0, 0, width, height);
-
-  const breakdown = (latestTransactions?.category_breakdown_30d ?? []).slice(0, 6);
-  if (breakdown.length === 0) {
-    ctx.font = "13px Manrope, sans-serif";
-    ctx.fillStyle = "#7C948A";
-    ctx.fillText("No spending data yet.", 10, height / 2);
-    return;
-  }
-
-  const max = Math.max(...breakdown.map((b) => b.total));
-  const padding = 10;
-  const barWidth = (width - padding * 2) / breakdown.length - 10;
-
-  breakdown.forEach((b, i) => {
-    const barHeight = (b.total / max) * (height - padding * 2 - 20);
-    const x = padding + i * ((width - padding * 2) / breakdown.length) + 5;
-    const y = height - padding - barHeight;
-
-    ctx.fillStyle = "#00D9A3";
-    ctx.fillRect(x, y, barWidth, barHeight);
-
-    ctx.font = "10px Manrope, sans-serif";
-    ctx.fillStyle = "#7C948A";
-    ctx.textAlign = "center";
-    const label = b.category.replaceAll("_", " ").toLowerCase().slice(0, 10);
-    ctx.fillText(label, x + barWidth / 2, height - 2);
-  });
 }
 
 // ---------------------------------------------------------------
@@ -1707,55 +1671,6 @@ async function loadSubscriptionAudit() {
       .join("");
   } catch (err) {
     subscriptionListEl.innerHTML = `<div class="empty-state">Couldn't load: ${err.message}</div>`;
-  }
-}
-
-// ---------------------------------------------------------------
-// Debt payoff comparison — snowball (smallest balance first) vs.
-// avalanche (highest APR first), using real balances from get-balances
-// and real APRs/minimums from get-liabilities.
-// ---------------------------------------------------------------
-
-async function loadDebtPayoff() {
-  debtPayoffListEl.innerHTML = `<div class="empty-state">Loading…</div>`;
-  debtPayoffSummaryEl.textContent = "";
-
-  try {
-    const liabData = await callFunction("get-liabilities");
-    const debts = liabData.debts ?? [];
-
-    if (debts.length === 0) {
-      debtPayoffListEl.innerHTML = `<div class="empty-state">No liability detail available (not every institution supports this, or you have no debt connected).</div>`;
-      return;
-    }
-
-    // Match balances by account_id, not array position — Plaid doesn't
-    // guarantee liabilities and balances come back in the same order.
-    const accountsById = new Map((latestBalances?.accounts ?? []).map((a) => [a.account_id, a]));
-
-    const enriched = debts.map((d) => ({
-      ...d,
-      balance: accountsById.get(d.account_id)?.current ?? null,
-    }));
-
-    const avalancheOrder = [...enriched].sort((a, b) => (b.apr ?? 0) - (a.apr ?? 0));
-
-    debtPayoffListEl.innerHTML = avalancheOrder
-      .map(
-        (d, i) => `
-        <div class="debt-row">
-          <div class="debt-row-meta">
-            <span>${i + 1}. ${d.name}</span>
-            <span class="debt-row-sub">${d.apr !== null ? d.apr.toFixed(2) + "% APR" : "APR not available"}${d.balance !== null ? " · " + formatMoney(d.balance) : ""}</span>
-          </div>
-          <span class="mono">${d.minimum_payment !== null ? formatMoney(d.minimum_payment) + "/mo min" : ""}</span>
-        </div>`
-      )
-      .join("");
-
-    debtPayoffSummaryEl.textContent = "Sorted highest APR first (avalanche method, usually saves the most in interest). Pay minimums on everything else, put extra toward #1.";
-  } catch (err) {
-    debtPayoffListEl.innerHTML = `<div class="empty-state">Couldn't load: ${err.message}</div>`;
   }
 }
 
