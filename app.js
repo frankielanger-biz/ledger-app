@@ -1143,6 +1143,33 @@ trendCanvasEl.addEventListener("touchend", hideTrendTooltip);
 const FORECAST_YEARS = 10;
 const FORECAST_ANNUAL_RETURN = 0.07;
 
+// Simulates month by month (up to a 40-year cap) until net worth crosses
+// the goal, then interpolates between the last two months for a
+// one-decimal-place estimate. Basic math, not a real financial model:
+// it assumes the current linear growth rate and the 7%/yr investing
+// assumption both hold steady the whole way, which real life won't.
+function estimateYearsToGoal(startNetWorth, monthlyLinearRate, monthlyRate, extraInvesting, goalNetWorth) {
+  const CAP_MONTHS = 480; // 40 years
+  let investingBalance = 0;
+  let prevValue = startNetWorth;
+
+  for (let m = 1; m <= CAP_MONTHS; m++) {
+    investingBalance = investingBalance * (1 + monthlyRate) + extraInvesting;
+    const value = startNetWorth + monthlyLinearRate * m + investingBalance;
+
+    if (value >= goalNetWorth) {
+      // Linear interpolation between month m-1 and m for a fractional month.
+      const span = value - prevValue;
+      const fraction = span > 0 ? (goalNetWorth - prevValue) / span : 0;
+      const monthsToGoal = m - 1 + fraction;
+      return monthsToGoal / 12;
+    }
+    prevValue = value;
+  }
+
+  return null; // Didn't reach it within 40 years.
+}
+
 function renderGoal(data) {
   const savedSavings = localStorage.getItem("ledger_extra_savings");
   const savedInvesting = localStorage.getItem("ledger_extra_investing");
@@ -1185,16 +1212,17 @@ function updateForecast(data) {
     extraInvesting > 0 ? extraInvesting * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate) : 0;
   const adjustedFinal = baselineFinal + flatSavingsTotal + investingFV;
 
-  const hasExtra = extraSavings > 0 || extraInvesting > 0;
-  const projectedNetWorth = hasExtra ? adjustedFinal : baselineFinal;
-
   let goalLine = "";
   if (goalNetWorth > 0) {
-    if (projectedNetWorth >= goalNetWorth) {
-      goalLine = `<p class="goal-status goal-status-hit">On track to pass your ${formatMoney(goalNetWorth)} goal within ${FORECAST_YEARS} years.</p>`;
+    const monthlyLinearRate = baseGrowthPerDay * 30.44 + extraSavings;
+    const yearsToGoal = estimateYearsToGoal(last.net_worth, monthlyLinearRate, monthlyRate, extraInvesting, goalNetWorth);
+
+    if (goalNetWorth <= last.net_worth) {
+      goalLine = `<p class="goal-status goal-status-hit">You've already passed your ${formatMoney(goalNetWorth)} goal.</p>`;
+    } else if (yearsToGoal === null) {
+      goalLine = `<p class="goal-status goal-status-short">At this pace, your ${formatMoney(goalNetWorth)} goal is more than 40 years out. Try increasing your savings or investing amount above.</p>`;
     } else {
-      const gap = goalNetWorth - projectedNetWorth;
-      goalLine = `<p class="goal-status goal-status-short">Projected to fall about ${formatMoney(gap)} short of your ${formatMoney(goalNetWorth)} goal in ${FORECAST_YEARS} years.</p>`;
+      goalLine = `<p class="goal-status goal-status-hit">At this pace, you'd reach your ${formatMoney(goalNetWorth)} goal in about ${yearsToGoal.toFixed(1)} years.</p>`;
     }
   }
 
